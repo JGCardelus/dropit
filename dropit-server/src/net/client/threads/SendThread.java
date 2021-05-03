@@ -2,6 +2,7 @@ package net.client.threads;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.util.LinkedList;
 import java.util.List;
 
 import net.client.Client;
@@ -9,59 +10,66 @@ import packet.Packet;
 
 public class SendThread extends Thread {
 	private Client client;
-	private Packet packet;
-	private SendThread previousThread;
+	private List<Packet> packets;
 
-	public SendThread(Client client, Packet packet) {
+	public SendThread(Client client) {
 		this.setClient(client);
-		this.setPacket(packet);
-		this.setPreviousThread();
+		this.setPackets(new LinkedList<Packet>());
 	}
 
-	public void setPreviousThread() {
-		List<SendThread> clientSendThreads = this.client.getSendThreads();
-		if (!clientSendThreads.isEmpty()) {
-			// There are more sendThreads than myself, preivous sendThread is the last one
-			this.previousThread = clientSendThreads.get(clientSendThreads.size() - 1);
+	public List<Packet> getPackets() {
+		return packets;
+	}
+
+	public void setPackets(List<Packet> packets) {
+		this.packets = packets;
+	}
+
+	public List<Packet> clearPacketsOfPriority(int n) {
+		List<Packet> packets = new LinkedList<Packet>();
+		for (Packet packet : this.getPackets())
+			if (packet.getPriority() == n)
+				packets.add(packet);
+
+		this.packets.removeAll(packets);
+		return packets;
+	}
+
+	public List<Packet> clearPacketsOfPriority(int n, int size) {
+		List<Packet> packets = new LinkedList<Packet>();
+		for (Packet packet : this.getPackets()) {
+			if (packet.getPriority() == n)
+				packets.add(packet);
+			if (packets.size() == size)
+				break;
 		}
-	}
 
-	public Packet getPacket() {
-		return packet;
-	}
-
-	public void setPacket(Packet packet) {
-		this.packet = packet;
+		this.packets.removeAll(packets);
+		return packets;
 	}
 
 	@Override
 	public void run() {
-		// First wait until previous sendThread has finished
-		if (this.previousThread != null) {
-			try {
-				this.previousThread.join(); // Wait until last has finished
-			} catch (InterruptedException e) {
-				this.previousThread.interrupt(); // Halt execution of last one
-				e.printStackTrace();
-			}
-		}
-		// When last thread finishes, send packet
-		this.send();
-		// Remove self from queue
-		this.client.removeSendThread(this);
-	}
-
-	public void send() {
-		// Send packet
 		try {
 			ObjectOutputStream oos = new ObjectOutputStream(this.client.getSocket().getOutputStream());
-			oos.writeObject(this.packet);
-			// Don't close socket in case someone else needs it
-			oos.flush();
-		} catch (IOException e) {
-			e.printStackTrace();
+			
+			while (true) {
+				// Clear parent's queue
+				this.packets.addAll(this.client.clearPackets());
+				// Get and clear all packets of max priority
+				for (Packet packet : this.clearPacketsOfPriority(Packet.MAX_PRIORITY))
+					this.send(oos, packet);
+				// Get and clear MID_PRIORITY_CLEAR_RATE packets of mid priority
+				for (Packet packet : this.clearPacketsOfPriority(Packet.MID_PRIORITY, Client.MID_PRIORITY_CLEAR_RATE))
+					this.send(oos, packet);
+				// Get and clear 1 packet of no_priority
+				for (Packet packet : this.clearPacketsOfPriority(Packet.NO_PRIORITY, 1))
+					this.send(oos, packet);
+			}
+		} catch (IOException ioe) {
+			// The socket has closed
+			this.client.close();
 		}
-
 	}
 
 	public Client getClient() {
@@ -72,36 +80,13 @@ public class SendThread extends Thread {
 		this.client = client;
 	}
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((client == null) ? 0 : client.hashCode());
-		result = prime * result + ((packet == null) ? 0 : packet.hashCode());
-		return result;
+	private void send(ObjectOutputStream oos, Packet packet) {
+		try {
+			oos.writeObject(packet);
+			oos.flush();
+			System.out.println(packet);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		SendThread other = (SendThread) obj;
-		if (client == null) {
-			if (other.client != null)
-				return false;
-		} else if (!client.equals(other.client))
-			return false;
-		if (packet == null) {
-			if (other.packet != null)
-				return false;
-		} else if (!packet.equals(other.packet))
-			return false;
-		return true;
-	}
-
-	
 }

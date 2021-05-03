@@ -11,17 +11,21 @@ import net.server.Server;
 import packet.Packet;
 
 public class Client extends Thread {
+	public static final int MID_PRIORITY_CLEAR_RATE = 4;
+	
 	private Server server;
 
-	private Socket socket; // Socket binded to Client
+	private Socket socket;
 	private boolean isLive;
+
+	private List<Packet> packets;
 
 	// Internal threads
 	private ReadThread readThread;
-	private List<SendThread> sendThreads;
+	private SendThread sendThread;
 
 	public Client(Server server, Socket socket) {
-		this.setSendThreads(new LinkedList<SendThread>());
+		this.setPackets(new LinkedList<Packet>());
 		this.setServer(server);
 		this.setSocket(socket);
 	}
@@ -32,22 +36,9 @@ public class Client extends Thread {
 		// Start reader
 		this.readThread = new ReadThread(this);
 		this.readThread.start();
-
-		for (int i = 0; i < 10; i++) {
-			this.send(new Packet(i));
-		}
-	}
-
-	public void setSendThreads(List<SendThread> sendThreads) {
-		this.sendThreads = sendThreads;
-	}
-
-	public List<SendThread> getSendThreads() {
-		return this.sendThreads;
-	}
-
-	public synchronized void removeSendThread(SendThread sendThread) {
-		this.sendThreads.remove(sendThread);
+		// Start sender
+		this.sendThread = new SendThread(this);
+		this.sendThread.start();
 	}
 
 	public Server getServer() {
@@ -56,6 +47,20 @@ public class Client extends Thread {
 
 	public void setServer(Server server) {
 		this.server = server;
+	}
+
+	public synchronized List<Packet> getPackets() {
+		return packets;
+	}
+
+	public synchronized void setPackets(List<Packet> packets) {
+		this.packets = packets;
+	}
+
+	public synchronized List<Packet> clearPackets() {
+		List<Packet> packets = this.getPackets();
+		this.packets = new LinkedList<Packet>();
+		return packets;
 	}
 
 	public boolean isLive() {
@@ -88,10 +93,13 @@ public class Client extends Thread {
 		}
 	}
 
-	public void send(Packet packet) {
-		SendThread newSendThread = new SendThread(this, packet);
-		this.sendThreads.add(newSendThread);
-		newSendThread.start();
+	public synchronized void send(Packet packet) {
+		this.packets.add(packet);
+	}
+
+	public synchronized void send(List<Packet> packets) {
+		for (Packet packet : packets)
+			this.packets.add(packet);
 	}
 
 	@Override

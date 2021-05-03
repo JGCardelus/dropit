@@ -2,7 +2,6 @@ package net.client.threads;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.net.Socket;
 
 import net.client.Client;
 import packet.Packet;
@@ -16,7 +15,19 @@ public class ReadThread extends Thread {
 
 	@Override
 	public void run() {
-		this.read();
+		try {
+			ObjectInputStream ois = new ObjectInputStream(this.client.getSocket().getInputStream());
+			
+			while (true) {
+				Object obj = ois.readObject();
+				this.read(obj);
+			}
+		} catch (IOException ioe) {
+			// The socket has closed
+			this.client.close();
+		} catch (ClassNotFoundException cnfe) {
+			cnfe.printStackTrace();
+		}
 	}
 
 	public Client getClient() {
@@ -27,23 +38,10 @@ public class ReadThread extends Thread {
 		this.client = client;
 	}
 
-	private void read() {
-		try {
-			Socket socket = this.client.getSocket();
-			ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-			
-			while (true) {
-				Object obj = ois.readObject();
-				if (obj instanceof Packet) {
-					Packet packet = (Packet) obj;
-					this.client.handlePacket(packet);
-				}
-			}
-		} catch (IOException ioe) {
-			// The socket has closed
-			this.client.close();
-		} catch (ClassNotFoundException cnfe) {
-			cnfe.printStackTrace();
+	private void read(Object obj) {
+		if (obj instanceof Packet) {
+			Packet packet = (Packet) obj;
+			this.client.handlePacket(packet);
 		}
 	}
 }

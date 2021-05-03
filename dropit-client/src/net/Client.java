@@ -21,13 +21,13 @@ public class Client extends Thread {
 	@Override
 	public void run() {
 		try {
-			this.socket = new Socket("2.2.2.51", PORT);
+			this.socket = new Socket("192.168.1.152", PORT);
 
-			ObjectOutputStream oos = new ObjectOutputStream(this.socket.getOutputStream());
-			for (int i = 0; i < 10; i++) {
-				oos.writeObject(new Packet(i));
-				oos.flush();
-			}
+			// ObjectOutputStream oos = new ObjectOutputStream(this.socket.getOutputStream());
+			// for (int i = 0; i < 10; i++) {
+			// 	oos.writeObject(new Packet(i));
+			// 	oos.flush();
+			// }
 
 			ObjectInputStream ois = new ObjectInputStream(this.socket.getInputStream());
 			

@@ -27,8 +27,8 @@ public class AcceptThread extends Thread {
 			this.server.addClient(newClient);
 			// Start the client
 			newClient.start();
-
 			DebugTools.print("New client accepted");
+
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
