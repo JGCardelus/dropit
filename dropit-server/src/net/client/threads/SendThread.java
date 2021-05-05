@@ -52,7 +52,6 @@ public class SendThread extends Thread {
 	public void run() {
 		try {
 			ObjectOutputStream oos = new ObjectOutputStream(this.client.getSocket().getOutputStream());
-			
 			while (true) {
 				// Clear parent's queue
 				this.packets.addAll(this.client.clearPackets());
@@ -84,7 +83,6 @@ public class SendThread extends Thread {
 		try {
 			oos.writeObject(packet);
 			oos.flush();
-			System.out.println(packet);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

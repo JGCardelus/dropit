@@ -21,9 +21,9 @@ public class Client extends Thread {
 	@Override
 	public void run() {
 		try {
-			this.socket = new Socket("192.168.1.152", PORT);
+			this.socket = new Socket("172.24.154.30", PORT);
 
-			// ObjectOutputStream oos = new ObjectOutputStream(this.socket.getOutputStream());
+			ObjectOutputStream oos = new ObjectOutputStream(this.socket.getOutputStream());
 			// for (int i = 0; i < 10; i++) {
 			// 	oos.writeObject(new Packet(i));
 			// 	oos.flush();
@@ -31,11 +31,29 @@ public class Client extends Thread {
 
 			ObjectInputStream ois = new ObjectInputStream(this.socket.getInputStream());
 			
-			while (true) {
+			for (int i = 0; i < 3; i++) {
 				Object obj = ois.readObject();
 				if (obj instanceof Packet) {
 					Packet packet = (Packet) obj;
 					System.out.println(packet);
+
+					if (packet.getQos() == Packet.QOS_LEVEL_1) {
+						oos.writeObject(new Packet(packet.getId(), Packet.CODE_CONFIRMATION, Packet.QOS_LEVEL_0));
+						oos.flush();
+					}
+				}
+			}
+
+			for (int i = 0; i < 3; i++) {
+				Object obj = ois.readObject();
+				if (obj instanceof Packet) {
+					Packet packet = (Packet) obj;
+					System.out.println(packet);
+
+					if (packet.getQos() == Packet.QOS_LEVEL_1) {
+						oos.writeObject(new Packet(packet.getId(), Packet.CODE_RESEND, Packet.QOS_LEVEL_0));
+						oos.flush();
+					}
 				}
 			}
 		} catch (UnknownHostException e) {

@@ -19,6 +19,7 @@ public class Client extends Thread {
 	private boolean isLive;
 
 	private List<Packet> packets;
+	private List<Packet> unconfirmedPackets; // Packets with QoS 1
 
 	// Internal threads
 	private ReadThread readThread;
@@ -26,6 +27,7 @@ public class Client extends Thread {
 
 	public Client(Server server, Socket socket) {
 		this.setPackets(new LinkedList<Packet>());
+		this.setUnconfirmedPackets(new LinkedList<Packet>());
 		this.setServer(server);
 		this.setSocket(socket);
 	}
@@ -39,6 +41,14 @@ public class Client extends Thread {
 		// Start sender
 		this.sendThread = new SendThread(this);
 		this.sendThread.start();
+	}
+
+	public List<Packet> getUnconfirmedPackets() {
+		return this.unconfirmedPackets;
+	}
+
+	public void setUnconfirmedPackets(List<Packet> unconfirmedPackets) {
+		this.unconfirmedPackets = unconfirmedPackets;
 	}
 
 	public Server getServer() {
@@ -59,8 +69,31 @@ public class Client extends Thread {
 
 	public synchronized List<Packet> clearPackets() {
 		List<Packet> packets = this.getPackets();
+		for (Packet packet : packets) {
+			if (packet.getQos() == Packet.QOS_LEVEL_1) {
+				if (!this.unconfirmedPackets.contains(packet))
+					this.unconfirmedPackets.add(packet);
+			}
+		}
 		this.packets = new LinkedList<Packet>();
 		return packets;
+	}
+
+	// Packet might have arrived with errors, resend original one
+	public void resendPacket(Packet packet) {
+		Packet originalPacket = null;
+		for (Packet testPacket : this.unconfirmedPackets)
+			if (testPacket.equals(packet))
+				originalPacket = testPacket;
+
+		if (originalPacket != null) {
+			this.unconfirmedPackets.remove(originalPacket);
+			this.send(originalPacket);
+		}
+	}
+
+	public void confirmPacket(Packet packet) {
+		this.unconfirmedPackets.remove(packet);
 	}
 
 	public boolean isLive() {
@@ -80,7 +113,16 @@ public class Client extends Thread {
 	}
 
 	public void handlePacket(Packet packet) {
-		System.out.println(packet.getId());
+		switch(packet.getCode()) {
+			case Packet.CODE_CONFIRMATION:
+				this.confirmPacket(packet);
+			break;
+			case Packet.CODE_RESEND:
+				this.resendPacket(packet);
+			break;
+			default:
+			break;
+		}
 	}
 
 	public void close() {
