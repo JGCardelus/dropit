@@ -3,14 +3,16 @@ package net.server;
 import java.util.LinkedList;
 import java.util.List;
 
+import basic.IdGenerator;
 import debug.DebugTools;
 import net.client.Client;
 import net.server.threads.AcceptThread;
+import packet.Packet;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 
-public class Server extends Thread {
+public class Server extends Thread implements IdGenerator {
 	public static final int PORT = 8008;
 	
 	private ServerSocket socket;
@@ -67,6 +69,35 @@ public class Server extends Thread {
 	}
 
 	public void close(Client client) {
+		try {
+			client.getSocket().close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
 		this.clients.remove(client);
+	}
+
+	public void send(Client client, List<Packet> packets) {
+		client.send(packets);
+	}
+
+	public void send(List<Client> clients, List<Packet> packets) {
+		for (Client client : clients)
+			client.send(packets);
+	}
+
+	public void propagate(List<Packet> packets) {
+		for (Client client : this.getClients())
+			client.send(packets);
+	}
+
+	private int id = 0; // Starts always at zero
+	@Override
+	public synchronized int nextId() {
+		this.id += 1;
+		if (Integer.MAX_VALUE == this.id)
+			this.id = 0;
+		return id;
 	}
 }

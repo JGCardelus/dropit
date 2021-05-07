@@ -6,6 +6,6 @@ public class App {
         Server server = new Server();
         server.start();
 
-        IOManager ioManager = new IOManager();
+        IOManager ioManager = new IOManager(server);
     }
 }

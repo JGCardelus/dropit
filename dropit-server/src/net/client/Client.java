@@ -127,12 +127,6 @@ public class Client extends Thread {
 
 	public void close() {
 		this.server.close(this);
-
-		try {
-			this.socket.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 
 	public synchronized void send(Packet packet) {

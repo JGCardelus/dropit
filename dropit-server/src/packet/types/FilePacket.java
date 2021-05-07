@@ -7,25 +7,12 @@ public class FilePacket extends Packet {
 	private byte[] bytes;
 
 	public FilePacket(int id) {
-		this(
-			id, 
-			Packet.DEFAULT_CODE, 
-			Packet.DEFAULT_QOS,
-			Packet.DEFAULT_PRIORITY
-		);
-	}
-	
-	public FilePacket(int id, int code, int qos) {
-		this(
+		super(
 			id,
-			code,
-			qos,
-			Packet.DEFAULT_PRIORITY
+			Packet.CODE_FILEPACKET,
+			Packet.QOS_LEVEL_1,
+			Packet.NO_PRIORITY
 		);
-	}
-
-	public FilePacket(int id, int code, int qos, int priority) {
-		super(id, code, qos, priority);
 	}
 
 	public byte[] getBytes() {
