@@ -5,15 +5,15 @@ import java.util.List;
 
 import packet.Packet;
 
-public class FileHeaderPacket extends Packet {
-	public static final int NO_FILE_ID = -1;
-	public static final int NO_FILE_HASH = -1;
+public class BufferHeaderPacket extends Packet {
+	public static final int NO_BUFFER_ID = -1;
+	public static final int NO_BUFFER_HASH = -1;
 	
-	private int fileId = NO_FILE_ID;
+	private int bufferId = NO_BUFFER_ID;
 	private List<Integer> packetIds = new LinkedList<Integer>();
-	private int fileHash = NO_FILE_HASH;
+	private int bufferHash = NO_BUFFER_HASH;
 	
-	public FileHeaderPacket(int id) {
+	public BufferHeaderPacket(int id) {
 		super(
 			id, 
 			Packet.CODE_FILEHEADER,
@@ -21,11 +21,11 @@ public class FileHeaderPacket extends Packet {
 			Packet.MAX_PRIORITY);
 	}
 
-	public int getFileId() {
-		return fileId;
+	public int getBufferId() {
+		return bufferId;
 	}
-	public void setFileId(int fileId) {
-		this.fileId = fileId;
+	public void setBufferId(int fileId) {
+		this.bufferId = fileId;
 	}
 	public List<Integer> getPacketIds() {
 		return packetIds;
@@ -33,11 +33,11 @@ public class FileHeaderPacket extends Packet {
 	public void setPacketIds(List<Integer> packetIds) {
 		this.packetIds = packetIds;
 	}
-	public int getFileHash() {
-		return fileHash;
+	public int getBufferHash() {
+		return bufferHash;
 	}
-	public void setFileHash(int fileHash) {
-		this.fileHash = fileHash;
+	public void setBufferHash(int fileHash) {
+		this.bufferHash = fileHash;
 	}
 	public void addPacket(int filePacketId) {
 		this.packetIds.add(filePacketId);

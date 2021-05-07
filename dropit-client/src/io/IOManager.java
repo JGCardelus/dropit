@@ -6,22 +6,22 @@ import java.util.List;
 import basic.IdGenerator;
 import io.threads.files.FileReadThread;
 import io.threads.files.FileWriteThread;
-import net.server.Server;
+import net.client.Client;
 import packet.types.BufferHeaderPacket;
 import packet.types.FilePacket;
 
 public class IOManager implements IdGenerator{
-	private Server server;
+	private Client client;
 	
-	public IOManager(Server server) {
-		this.setServer(server);
+	public IOManager(Client client) {
+		this.setClient(client);
 	}
 
 	public FileReadThread readFile(File file) {
 		return new FileReadThread
 		(
 			file,
-			this.server, 
+			this.client, 
 			this
 		);
 	}
@@ -30,12 +30,12 @@ public class IOManager implements IdGenerator{
 		return new FileWriteThread(file, bufferHeaderPacket, packets);
 	}
 
-	public Server getServer() {
-		return server;
+	public Client getClient() {
+		return client;
 	}
 
-	public void setServer(Server server) {
-		this.server = server;
+	public void setClient(Client client) {
+		this.client = client;
 	}
 
 	private int id = 0; // Starts always at zero

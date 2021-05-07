@@ -10,7 +10,7 @@ import java.util.List;
 import io.IOManager;
 import io.events.FileReadAdapter;
 import io.events.FileReadEvent;
-import net.server.Server;
+import net.client.Client;
 import packet.Packet;
 import packet.types.BufferHeaderPacket;
 import packet.types.FilePacket;
@@ -21,14 +21,15 @@ public class FileReadThread extends Thread {
 
 	// To generate ids
 	private IOManager ioManager;
-	private Server server;
+	private Client client;
 
 	// Events
 	private List<FileReadAdapter> fileReadAdapters = new LinkedList<>();
 
-	public FileReadThread(File file, Server server, IOManager ioManager) {
+	public FileReadThread(File file, Client client, IOManager ioManager) {
 		this.setFile(file);
 		this.setIoManager(ioManager);
+		this.setClient(client);
 	}
 
 	@Override
@@ -41,7 +42,7 @@ public class FileReadThread extends Thread {
 				this.packets.add(fileHeaderPacket);
 
 				while (fr.available() > 0) {
-					int newFilePacketId = this.server.nextId();
+					int newFilePacketId = this.client.nextId();
 					fileHeaderPacket.addPacket(newFilePacketId);
 					FilePacket newFilePacket = new FilePacket(newFilePacketId);
 
@@ -78,7 +79,7 @@ public class FileReadThread extends Thread {
 	}
 
 	public BufferHeaderPacket getBufferHeader() {
-		BufferHeaderPacket bufferHeaderPacket = new BufferHeaderPacket(this.server.nextId());
+		BufferHeaderPacket bufferHeaderPacket = new BufferHeaderPacket(this.client.nextId());
 		bufferHeaderPacket.setBufferId(this.ioManager.nextId());
 
 		return bufferHeaderPacket;
@@ -100,20 +101,20 @@ public class FileReadThread extends Thread {
 		this.file = file;
 	}
 
+	public Client getClient() {
+		return client;
+	}
+
+	public void setClient(Client client) {
+		this.client = client;
+	}
+
 	public List<Packet> getPackets() {
 		return packets;
 	}
 
 	public void setPackets(List<Packet> packets) {
 		this.packets = packets;
-	}
-
-	public Server getServer() {
-		return server;
-	}
-
-	public void setServer(Server server) {
-		this.server = server;
 	}
 
 	public IOManager getIoManager() {

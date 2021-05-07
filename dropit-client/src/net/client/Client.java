@@ -1,24 +1,23 @@
 package net.client;
 
+import java.io.IOException;
 import java.net.Socket;
 import java.util.LinkedList;
 import java.util.List;
 
+import basic.IdGenerator;
 import net.buffer.Buffers;
 import net.client.events.ClientAdapter;
 import net.client.events.PacketArrivedEvent;
 import net.client.threads.ReadThread;
 import net.client.threads.SendThread;
-import net.server.Server;
 import packet.Packet;
 import packet.types.BufferHeaderPacket;
 
-public class Client extends Thread {
+public class Client extends Thread implements IdGenerator{
 	public static final int MID_PRIORITY_CLEAR_RATE = 4;
 	
-	private Server server;
-
-	private Buffers buffers;
+	private Buffers buffers = new Buffers();
 
 	private Socket socket;
 	private boolean isLive;
@@ -33,12 +32,10 @@ public class Client extends Thread {
 	// Events
 	private List<ClientAdapter> clientAdapters = new LinkedList<>();
 
-	public Client(Server server, Socket socket) {
+	public Client(Socket socket) {
 		this.setPackets(new LinkedList<Packet>());
 		this.setUnconfirmedPackets(new LinkedList<Packet>());
-		this.setServer(server);
 		this.setSocket(socket);
-		this.setBuffers(new Buffers(this));
 	}
 
 	@Override
@@ -58,14 +55,6 @@ public class Client extends Thread {
 
 	public void setUnconfirmedPackets(List<Packet> unconfirmedPackets) {
 		this.unconfirmedPackets = unconfirmedPackets;
-	}
-
-	public Server getServer() {
-		return server;
-	}
-
-	public void setServer(Server server) {
-		this.server = server;
 	}
 
 	public synchronized List<Packet> getPackets() {
@@ -121,7 +110,7 @@ public class Client extends Thread {
 		this.socket = socket;
 	}
 
-	public synchronized void handlePacket(Packet packet) {
+	public void handlePacket(Packet packet) {
 		switch(packet.getCode()) {
 			case Packet.CODE_CONFIRMATION:
 				this.confirmPacket(packet);
@@ -139,16 +128,12 @@ public class Client extends Thread {
 		}
 	}
 
-	public Buffers getBuffers() {
-		return buffers;
-	}
-
-	public void setBuffers(Buffers buffers) {
-		this.buffers = buffers;
-	}
-
 	public void close() {
-		this.server.close(this);
+		try {
+			this.socket.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public synchronized void send(Packet packet) {
@@ -160,26 +145,19 @@ public class Client extends Thread {
 			this.packets.add(packet);
 	}
 
-	public synchronized List<ClientAdapter> getClientAdapters() {
-		return this.clientAdapters;
-	}
-
-	public synchronized void triggerPacketArrived(Packet packet) {
+	public void triggerPacketArrived(Packet packet) {
 		PacketArrivedEvent event = new PacketArrivedEvent(packet);
-		List<ClientAdapter> adapters = this.getClientAdapters();
-		for (int i = 0; i < adapters.size(); i++) {
-			adapters.get(i).onPacketArrived(event);
-		}
-		
+		for (ClientAdapter adapter : this.clientAdapters)
+			adapter.onPacketArrived(event);
 	}
 
 	public ClientAdapter addClientListener(ClientAdapter adapter) {
-		this.getClientAdapters().add(adapter);
+		this.clientAdapters.add(adapter);
 		return adapter;
 	}
 
 	public void removeClientListener(ClientAdapter adapter) {
-		this.getClientAdapters().remove(adapter);
+		this.clientAdapters.remove(adapter);
 	}
 
 	@Override
@@ -205,5 +183,14 @@ public class Client extends Thread {
 		} else if (!socket.equals(other.socket))
 			return false;
 		return true;
+	}
+
+	private int id = 0; // Starts always at zero
+	@Override
+	public synchronized int nextId() {
+		this.id += 1;
+		if (Integer.MAX_VALUE == this.id)
+			this.id = 0;
+		return id;
 	}
 }
