@@ -4,7 +4,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import net.buffer.events.BufferAdapter;
-import net.buffer.events.BufferEvent;
+import net.buffer.events.BufferCompleteEvent;
 import net.client.Client;
 import net.client.events.ClientAdapter;
 import net.client.events.PacketArrivedEvent;
@@ -25,6 +25,7 @@ public class Buffer {
 
 	public Buffer(BufferHeaderPacket bufferHeaderPacket, Client client) {
 		this.setPacketIds(bufferHeaderPacket.getPacketIds());
+		System.out.println(bufferHeaderPacket.getPacketIds());
 		this.setHeader(bufferHeaderPacket);
 		this.setClient(client);
 		this.initPacketArrivedListener();
@@ -67,6 +68,10 @@ public class Buffer {
 		this.header = header;
 	}
 
+	public synchronized ClientAdapter getAdapter() {
+		return this.adapter;
+	}
+
 	private void checkBufferState() {
 		int packetsCount = 0;
 		for (Packet packet : this.packets) {
@@ -76,7 +81,7 @@ public class Buffer {
 		}
 		if (packetsCount ==this.packetIds.size()) {
 			this.setComplete(true);
-			this.client.removeClientListener(this.adapter);
+			this.client.removeClientListener(this.getAdapter());
 			this.triggerOnBufferComplete();
 		}
 	}
@@ -84,7 +89,7 @@ public class Buffer {
 	private void handlePacket(Packet packet) {
 		if (this.packetIds.contains(packet.getId())) {
 			int index = this.packetIds.indexOf(packet.getId());
-			this.packets.set(index, packet);
+			this.packets.add(index, packet);
 			this.checkBufferState();
 		}
 	}
@@ -99,7 +104,7 @@ public class Buffer {
 	}
 
 	public void triggerOnBufferComplete() {
-		BufferEvent event = new BufferEvent(this.getHeader(), this.getPackets());
+		BufferCompleteEvent event = new BufferCompleteEvent(this.getHeader(), this.getPackets());
 		for (BufferAdapter adapter : this.bufferAdapters) {
 			adapter.onBufferComplete(event);
 		}

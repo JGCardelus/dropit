@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 
+import app.users.User;
 import basic.IdGenerator;
 import net.buffer.Buffers;
 import net.client.events.ClientAdapter;
@@ -13,17 +15,21 @@ import net.client.threads.ReadThread;
 import net.client.threads.SendThread;
 import packet.Packet;
 import packet.types.BufferHeaderPacket;
+import packet.types.ConfirmationPacket;
+import packet.types.UserPacket;
 
-public class Client extends Thread implements IdGenerator{
+public class Client extends Thread implements IdGenerator {
 	public static final int MID_PRIORITY_CLEAR_RATE = 4;
-	
-	private Buffers buffers = new Buffers();
+
+	private Buffers buffers;
 
 	private Socket socket;
 	private boolean isLive;
 
+	private User user; // Each client is associated with one user
+
 	private List<Packet> packets;
-	private List<Packet> unconfirmedPackets; // Packets with QoS 1
+	private UnconfirmedPacketManager unconfirmedPacketManager = new UnconfirmedPacketManager(); // Packets with QoS 1
 
 	// Internal threads
 	private ReadThread readThread;
@@ -34,8 +40,8 @@ public class Client extends Thread implements IdGenerator{
 
 	public Client(Socket socket) {
 		this.setPackets(new LinkedList<Packet>());
-		this.setUnconfirmedPackets(new LinkedList<Packet>());
 		this.setSocket(socket);
+		this.setBuffers(new Buffers(this));
 	}
 
 	@Override
@@ -49,12 +55,12 @@ public class Client extends Thread implements IdGenerator{
 		this.sendThread.start();
 	}
 
-	public List<Packet> getUnconfirmedPackets() {
-		return this.unconfirmedPackets;
+	public User getUser() {
+		return user;
 	}
 
-	public void setUnconfirmedPackets(List<Packet> unconfirmedPackets) {
-		this.unconfirmedPackets = unconfirmedPackets;
+	public void setUser(User user) {
+		this.user = user;
 	}
 
 	public synchronized List<Packet> getPackets() {
@@ -69,29 +75,24 @@ public class Client extends Thread implements IdGenerator{
 		List<Packet> packets = this.getPackets();
 		for (Packet packet : packets) {
 			if (packet.getQos() == Packet.QOS_LEVEL_1) {
-				if (!this.unconfirmedPackets.contains(packet))
-					this.unconfirmedPackets.add(packet);
+				this.unconfirmedPacketManager.add(packet);
 			}
 		}
 		this.packets = new LinkedList<Packet>();
+
+		// Add uncofirmed packets that need to be resent
+		packets.addAll(this.unconfirmedPacketManager.getResendPackets());
 		return packets;
 	}
 
-	// Packet might have arrived with errors, resend original one
-	public void resendPacket(Packet packet) {
-		Packet originalPacket = null;
-		for (Packet testPacket : this.unconfirmedPackets)
-			if (testPacket.equals(packet))
-				originalPacket = testPacket;
-
-		if (originalPacket != null) {
-			this.unconfirmedPackets.remove(originalPacket);
-			this.send(originalPacket);
-		}
-	}
-
+	// Check that package has been sent
 	public void confirmPacket(Packet packet) {
-		this.unconfirmedPackets.remove(packet);
+		if (packet instanceof ConfirmationPacket) {
+			// Create placholder packet
+			ConfirmationPacket confirmationPacket = (ConfirmationPacket) packet;
+			Packet placeholderPacket = new Packet(confirmationPacket.getPacketToConfirmId());
+			this.unconfirmedPacketManager.remove(placeholderPacket);
+		}
 	}
 
 	public boolean isLive() {
@@ -110,22 +111,50 @@ public class Client extends Thread implements IdGenerator{
 		this.socket = socket;
 	}
 
-	public void handlePacket(Packet packet) {
+	public synchronized void handlePacket(Packet packet) {
+		if (packet.getQos() == Packet.QOS_LEVEL_1) {
+			this.sendPacketConfirmation(packet);
+		}
+
 		switch(packet.getCode()) {
 			case Packet.CODE_CONFIRMATION:
 				this.confirmPacket(packet);
 			break;
-			case Packet.CODE_RESEND:
-				this.resendPacket(packet);
-			break;
-			case Packet.CODE_FILEHEADER:
+			case Packet.CODE_BUFFERHEADER:
 				if (packet instanceof BufferHeaderPacket)
 					this.buffers.handleBufferHeaderPacket((BufferHeaderPacket) packet);
+			break;
+			case Packet.CODE_USERPACKET:
+				if (packet instanceof UserPacket)
+					this.handleUserPacket((UserPacket) packet);
 			break;
 			default:
 				this.triggerPacketArrived(packet);
 			break;
 		}
+	}
+
+	private void sendPacketConfirmation(Packet packet) {
+		int a = new Random().ints(0, 2).findFirst().getAsInt();
+		System.out.println("Packet arrived with QoS 1: " + packet.toString());
+		System.out.println(a);
+		if (a < 1) {
+			ConfirmationPacket confirmationPacket = new ConfirmationPacket(this.nextId());
+			confirmationPacket.setPacketToConfirmId(packet.getId());
+			this.send(confirmationPacket);
+		}
+	}
+
+	private void handleUserPacket(UserPacket packet) {
+		this.setUser(packet.getUser());
+	}
+
+	public Buffers getBuffers() {
+		return buffers;
+	}
+
+	public void setBuffers(Buffers buffers) {
+		this.buffers = buffers;
 	}
 
 	public void close() {
@@ -145,19 +174,26 @@ public class Client extends Thread implements IdGenerator{
 			this.packets.add(packet);
 	}
 
-	public void triggerPacketArrived(Packet packet) {
+	public synchronized List<ClientAdapter> getClientAdapters() {
+		return this.clientAdapters;
+	}
+
+	public synchronized void triggerPacketArrived(Packet packet) {
 		PacketArrivedEvent event = new PacketArrivedEvent(packet);
-		for (ClientAdapter adapter : this.clientAdapters)
-			adapter.onPacketArrived(event);
+		List<ClientAdapter> adapters = this.getClientAdapters();
+		for (int i = 0; i < adapters.size(); i++) {
+			adapters.get(i).onPacketArrived(event);
+		}
+		
 	}
 
 	public ClientAdapter addClientListener(ClientAdapter adapter) {
-		this.clientAdapters.add(adapter);
+		this.getClientAdapters().add(adapter);
 		return adapter;
 	}
 
 	public void removeClientListener(ClientAdapter adapter) {
-		this.clientAdapters.remove(adapter);
+		this.getClientAdapters().remove(adapter);
 	}
 
 	@Override

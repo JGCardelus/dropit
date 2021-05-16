@@ -4,7 +4,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import net.buffer.events.BufferAdapter;
-import net.buffer.events.BufferEvent;
+import net.buffer.events.BufferCompleteEvent;
 import net.client.Client;
 import net.client.events.ClientAdapter;
 import net.client.events.PacketArrivedEvent;
@@ -104,7 +104,7 @@ public class Buffer {
 	}
 
 	public void triggerOnBufferComplete() {
-		BufferEvent event = new BufferEvent(this.getHeader(), this.getPackets());
+		BufferCompleteEvent event = new BufferCompleteEvent(this.getHeader(), this.getPackets());
 		for (BufferAdapter adapter : this.bufferAdapters) {
 			adapter.onBufferComplete(event);
 		}

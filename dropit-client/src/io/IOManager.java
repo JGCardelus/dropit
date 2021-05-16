@@ -30,7 +30,7 @@ public class IOManager implements IdGenerator{
 		return new FileWriteThread(file, bufferHeaderPacket, packets);
 	}
 
-	public Client getClient() {
+	public Client getServer() {
 		return client;
 	}
 

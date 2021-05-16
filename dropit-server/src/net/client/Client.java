@@ -4,6 +4,7 @@ import java.net.Socket;
 import java.util.LinkedList;
 import java.util.List;
 
+import app.users.User;
 import net.buffer.Buffers;
 import net.client.events.ClientAdapter;
 import net.client.events.PacketArrivedEvent;
@@ -12,6 +13,8 @@ import net.client.threads.SendThread;
 import net.server.Server;
 import packet.Packet;
 import packet.types.BufferHeaderPacket;
+import packet.types.ConfirmationPacket;
+import packet.types.UserPacket;
 
 public class Client extends Thread {
 	public static final int MID_PRIORITY_CLEAR_RATE = 4;
@@ -23,8 +26,10 @@ public class Client extends Thread {
 	private Socket socket;
 	private boolean isLive;
 
+	private User user; // Each client is associated with one user
+
 	private List<Packet> packets;
-	private List<Packet> unconfirmedPackets; // Packets with QoS 1
+	private UnconfirmedPacketManager unconfirmedPacketManager = new UnconfirmedPacketManager(); // Packets with QoS 1
 
 	// Internal threads
 	private ReadThread readThread;
@@ -35,7 +40,6 @@ public class Client extends Thread {
 
 	public Client(Server server, Socket socket) {
 		this.setPackets(new LinkedList<Packet>());
-		this.setUnconfirmedPackets(new LinkedList<Packet>());
 		this.setServer(server);
 		this.setSocket(socket);
 		this.setBuffers(new Buffers(this));
@@ -52,20 +56,20 @@ public class Client extends Thread {
 		this.sendThread.start();
 	}
 
-	public List<Packet> getUnconfirmedPackets() {
-		return this.unconfirmedPackets;
-	}
-
-	public void setUnconfirmedPackets(List<Packet> unconfirmedPackets) {
-		this.unconfirmedPackets = unconfirmedPackets;
-	}
-
 	public Server getServer() {
 		return server;
 	}
 
 	public void setServer(Server server) {
 		this.server = server;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
 	}
 
 	public synchronized List<Packet> getPackets() {
@@ -80,29 +84,24 @@ public class Client extends Thread {
 		List<Packet> packets = this.getPackets();
 		for (Packet packet : packets) {
 			if (packet.getQos() == Packet.QOS_LEVEL_1) {
-				if (!this.unconfirmedPackets.contains(packet))
-					this.unconfirmedPackets.add(packet);
+				this.unconfirmedPacketManager.add(packet);
 			}
 		}
 		this.packets = new LinkedList<Packet>();
+
+		// Add uncofirmed packets that need to be resent
+		packets.addAll(this.unconfirmedPacketManager.getResendPackets());
 		return packets;
 	}
 
-	// Packet might have arrived with errors, resend original one
-	public void resendPacket(Packet packet) {
-		Packet originalPacket = null;
-		for (Packet testPacket : this.unconfirmedPackets)
-			if (testPacket.equals(packet))
-				originalPacket = testPacket;
-
-		if (originalPacket != null) {
-			this.unconfirmedPackets.remove(originalPacket);
-			this.send(originalPacket);
-		}
-	}
-
+	// Check that package has been sent
 	public void confirmPacket(Packet packet) {
-		this.unconfirmedPackets.remove(packet);
+		if (packet instanceof ConfirmationPacket) {
+			// Create placholder packet
+			ConfirmationPacket confirmationPacket = (ConfirmationPacket) packet;
+			Packet placeholderPacket = new Packet(confirmationPacket.getPacketToConfirmId());
+			this.unconfirmedPacketManager.remove(placeholderPacket);
+		}
 	}
 
 	public boolean isLive() {
@@ -122,21 +121,36 @@ public class Client extends Thread {
 	}
 
 	public synchronized void handlePacket(Packet packet) {
+		if (packet.getQos() == Packet.QOS_LEVEL_1) {
+			this.sendPacketConfirmation(packet);
+		}
+
 		switch(packet.getCode()) {
 			case Packet.CODE_CONFIRMATION:
 				this.confirmPacket(packet);
 			break;
-			case Packet.CODE_RESEND:
-				this.resendPacket(packet);
-			break;
-			case Packet.CODE_FILEHEADER:
+			case Packet.CODE_BUFFERHEADER:
 				if (packet instanceof BufferHeaderPacket)
 					this.buffers.handleBufferHeaderPacket((BufferHeaderPacket) packet);
+			break;
+			case Packet.CODE_USERPACKET:
+				if (packet instanceof UserPacket)
+					this.handleUserPacket((UserPacket) packet);
 			break;
 			default:
 				this.triggerPacketArrived(packet);
 			break;
 		}
+	}
+
+	private void sendPacketConfirmation(Packet packet) {
+		ConfirmationPacket confirmationPacket = new ConfirmationPacket(this.server.nextId());
+		confirmationPacket.setPacketToConfirmId(packet.getId());
+		this.send(confirmationPacket);
+	}
+
+	private void handleUserPacket(UserPacket packet) {
+		this.setUser(packet.getUser());
 	}
 
 	public Buffers getBuffers() {

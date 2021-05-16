@@ -1,16 +1,14 @@
 package net.server;
 
+import java.io.IOException;
+import java.net.ServerSocket;
 import java.util.LinkedList;
 import java.util.List;
 
 import basic.IdGenerator;
-import debug.DebugTools;
 import net.client.Client;
 import net.server.threads.AcceptThread;
 import packet.Packet;
-
-import java.io.IOException;
-import java.net.ServerSocket;
 
 public class Server extends Thread implements IdGenerator {
 	public static final int PORT = 8008;
@@ -29,7 +27,7 @@ public class Server extends Thread implements IdGenerator {
 	@Override
 	public void run() {
 		try {
-			DebugTools.print("Starting server");
+			System.out.println("Starting server");
 
 			this.socket = new ServerSocket(PORT);
 			this.setLive(true);
@@ -38,7 +36,7 @@ public class Server extends Thread implements IdGenerator {
 			acceptThread = new AcceptThread(this);
 			acceptThread.start();
 
-			DebugTools.print("Server live and accepting clients");
+			System.out.println("Server live and accepting clients");
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}

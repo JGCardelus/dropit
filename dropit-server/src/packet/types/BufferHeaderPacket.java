@@ -9,10 +9,13 @@ public class BufferHeaderPacket extends Packet {
 	public static final int NO_BUFFER_ID = -1;
 	public static final int NO_BUFFER_HASH = -1;
 	
+	public static final int DEFAULT_BUFFER_TYPE = 0;
+
 	private int bufferId = NO_BUFFER_ID;
 	private List<Integer> packetIds = new LinkedList<Integer>();
 	private int bufferHash = NO_BUFFER_HASH;
-	
+	private int bufferType = DEFAULT_BUFFER_TYPE;
+
 	public BufferHeaderPacket(int id) {
 		super(
 			id, 
@@ -21,6 +24,12 @@ public class BufferHeaderPacket extends Packet {
 			Packet.MAX_PRIORITY);
 	}
 
+	public int getBufferType() {
+		return bufferType;
+	}
+	public void setBufferType(int bufferType) {
+		this.bufferType = bufferType;
+	}
 	public int getBufferId() {
 		return bufferId;
 	}

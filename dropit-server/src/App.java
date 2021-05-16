@@ -1,5 +1,6 @@
 import io.IOManager;
 import net.server.Server;
+import packet.Packet;
 
 public class App {
     public static void main(String[] args) throws Exception {

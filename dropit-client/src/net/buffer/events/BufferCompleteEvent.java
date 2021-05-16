@@ -5,11 +5,11 @@ import java.util.List;
 import packet.Packet;
 import packet.types.BufferHeaderPacket;
 
-public class BufferEvent {
+public class BufferCompleteEvent {
 	private List<Packet> packets;
 	private BufferHeaderPacket header;
 	
-	public BufferEvent(BufferHeaderPacket header, List<Packet> packets) {
+	public BufferCompleteEvent(BufferHeaderPacket header, List<Packet> packets) {
 		this.setHeader(header);
 		this.setPackets(packets);
 	}
@@ -29,6 +29,4 @@ public class BufferEvent {
 	public void setHeader(BufferHeaderPacket header) {
 		this.header = header;
 	}
-
-	
 }

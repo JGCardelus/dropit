@@ -12,7 +12,7 @@ import io.events.FileReadAdapter;
 import io.events.FileReadEvent;
 import net.server.Server;
 import packet.Packet;
-import packet.types.BufferHeaderPacket;
+import packet.types.FileHeaderPacket;
 import packet.types.FilePacket;
 
 public class FileReadThread extends Thread {
@@ -37,7 +37,7 @@ public class FileReadThread extends Thread {
 			this.packets = new LinkedList<Packet>();
 
 			try (FileInputStream fr = new FileInputStream(this.file)) {
-				BufferHeaderPacket fileHeaderPacket = this.getBufferHeader();
+				FileHeaderPacket fileHeaderPacket = this.getFileHeader();
 				this.packets.add(fileHeaderPacket);
 
 				while (fr.available() > 0) {
@@ -77,11 +77,20 @@ public class FileReadThread extends Thread {
 		this.fileReadAdapters.add(adapter);
 	}
 
-	public BufferHeaderPacket getBufferHeader() {
-		BufferHeaderPacket bufferHeaderPacket = new BufferHeaderPacket(this.server.nextId());
-		bufferHeaderPacket.setBufferId(this.ioManager.nextId());
+	public FileHeaderPacket getFileHeader() {
+		FileHeaderPacket fileHeaderPacket = new FileHeaderPacket(this.server.nextId());
 
-		return bufferHeaderPacket;
+		String[] nameChunks = this.file.getName().split(".");	
+		String extension = nameChunks[nameChunks.length - 1];
+		StringBuilder name = new StringBuilder();
+		for (int i = 0; i < nameChunks.length - 1; i++)
+			name.append(nameChunks[i]);
+		
+		fileHeaderPacket.setFileName(name.toString());
+		fileHeaderPacket.setFileExtension(extension);
+		fileHeaderPacket.setBufferId(this.ioManager.nextId());
+
+		return fileHeaderPacket;
 	}
 
 	public List<FileReadAdapter> getFileReadAdapters() {

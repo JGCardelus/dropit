@@ -8,7 +8,7 @@ import java.util.Random;
 import io.IOManager;
 import io.threads.files.FileWriteThread;
 import net.buffer.events.BufferAdapter;
-import net.buffer.events.BufferEvent;
+import net.buffer.events.BufferCompleteEvent;
 import net.client.Client;
 import packet.Packet;
 import packet.types.BufferHeaderPacket;
@@ -28,7 +28,7 @@ public class Buffers {
 		this.buffers.add(buffer);
 		buffer.addBufferListener(new BufferAdapter() {
 			@Override
-			public void onBufferComplete(BufferEvent event) {
+			public void onBufferComplete(BufferCompleteEvent event) {
 					List<FilePacket> filePackets = new LinkedList<FilePacket>();
 					for (Packet packet : event.getPackets()) {
 						if (packet instanceof FilePacket)

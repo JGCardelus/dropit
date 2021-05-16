@@ -3,7 +3,6 @@ package net.server.threads;
 import java.io.IOException;
 import java.net.Socket;
 
-import debug.DebugTools;
 import net.client.Client;
 import net.server.Server;
 
@@ -27,7 +26,7 @@ public class AcceptThread extends Thread {
 			this.server.addClient(newClient);
 			// Start the client
 			newClient.start();
-			DebugTools.print("New client accepted");
+			System.out.println("New client accepted");
 
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
