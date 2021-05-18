@@ -19,7 +19,7 @@ public class BufferHeaderPacket extends Packet {
 	public BufferHeaderPacket(int id) {
 		super(
 			id, 
-			Packet.CODE_FILEHEADER,
+			Packet.CODE_BUFFERHEADER,
 			Packet.QOS_LEVEL_1,
 			Packet.MAX_PRIORITY);
 	}

@@ -1,3 +1,4 @@
+package test;
 import io.IOManager;
 import net.server.Server;
 import packet.Packet;

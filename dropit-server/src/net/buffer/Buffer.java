@@ -5,6 +5,7 @@ import java.util.List;
 
 import net.buffer.events.BufferAdapter;
 import net.buffer.events.BufferCompleteEvent;
+import net.buffer.events.BufferNewPacketEvent;
 import net.client.Client;
 import net.client.events.ClientAdapter;
 import net.client.events.PacketArrivedEvent;
@@ -25,7 +26,6 @@ public class Buffer {
 
 	public Buffer(BufferHeaderPacket bufferHeaderPacket, Client client) {
 		this.setPacketIds(bufferHeaderPacket.getPacketIds());
-		System.out.println(bufferHeaderPacket.getPacketIds());
 		this.setHeader(bufferHeaderPacket);
 		this.setClient(client);
 		this.initPacketArrivedListener();
@@ -90,6 +90,7 @@ public class Buffer {
 		if (this.packetIds.contains(packet.getId())) {
 			int index = this.packetIds.indexOf(packet.getId());
 			this.packets.add(index, packet);
+			this.triggerOnBufferNewPacket(packet);
 			this.checkBufferState();
 		}
 	}
@@ -101,6 +102,13 @@ public class Buffer {
 				Buffer.this.handlePacket(event.getPacket());
 			}
 		});
+	}
+
+	public void triggerOnBufferNewPacket(Packet packet) {
+		BufferNewPacketEvent event = new BufferNewPacketEvent(this, packet);
+		for (BufferAdapter adapter : this.bufferAdapters) {
+			adapter.onBufferNewPacket(event);
+		}
 	}
 
 	public void triggerOnBufferComplete() {
