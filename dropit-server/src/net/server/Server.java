@@ -7,6 +7,8 @@ import java.util.List;
 
 import basic.IdGenerator;
 import net.client.Client;
+import net.server.events.ServerAdapter;
+import net.server.events.ServerNewClientEvent;
 import net.server.threads.AcceptThread;
 import packet.Packet;
 
@@ -19,6 +21,9 @@ public class Server extends Thread implements IdGenerator {
 
 	// Internal threads
 	private AcceptThread acceptThread;
+
+	// Events
+	private List<ServerAdapter> serverAdapters = new LinkedList<ServerAdapter>();
 
 	public Server() {
 		this.setClients(new LinkedList<Client>());
@@ -88,6 +93,20 @@ public class Server extends Thread implements IdGenerator {
 	public void propagate(List<Packet> packets) {
 		for (Client client : this.getClients())
 			client.send(packets);
+	}
+
+	public synchronized List<ServerAdapter> getServerAdapters() {
+		return this.serverAdapters;
+	}
+
+	public synchronized void addServerListener(ServerAdapter adapter) {
+		this.serverAdapters.add(adapter);
+	}
+
+	public void triggerOnServerNewClient(ServerNewClientEvent event) {
+		for (ServerAdapter serverAdapter : this.getServerAdapters()) {
+			serverAdapter.onServerNewClient(event);
+		}
 	}
 
 	private int id = 0; // Starts always at zero

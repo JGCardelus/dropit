@@ -4,11 +4,10 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
 
 import app.users.User;
 import basic.IdGenerator;
-import net.buffer.Buffers;
+import net.buffer.BufferManager;
 import net.client.events.ClientAdapter;
 import net.client.events.PacketArrivedEvent;
 import net.client.threads.ReadThread;
@@ -20,8 +19,8 @@ import packet.types.UserPacket;
 
 public class Client extends Thread implements IdGenerator {
 	public static final int MID_PRIORITY_CLEAR_RATE = 4;
-
-	private Buffers buffers;
+	
+	private BufferManager bufferManager;
 
 	private Socket socket;
 	private boolean isLive;
@@ -41,7 +40,7 @@ public class Client extends Thread implements IdGenerator {
 	public Client(Socket socket) {
 		this.setPackets(new LinkedList<Packet>());
 		this.setSocket(socket);
-		this.setBuffers(new Buffers(this));
+		this.setBufferManager(new BufferManager(this));
 	}
 
 	@Override
@@ -73,13 +72,7 @@ public class Client extends Thread implements IdGenerator {
 
 	public synchronized List<Packet> clearPackets() {
 		List<Packet> packets = this.getPackets();
-		for (Packet packet : packets) {
-			if (packet.getQos() == Packet.QOS_LEVEL_1) {
-				this.unconfirmedPacketManager.add(packet);
-			}
-		}
 		this.packets = new LinkedList<Packet>();
-
 		// Add uncofirmed packets that need to be resent
 		packets.addAll(this.unconfirmedPacketManager.getResendPackets());
 		return packets;
@@ -122,7 +115,7 @@ public class Client extends Thread implements IdGenerator {
 			break;
 			case Packet.CODE_BUFFERHEADER:
 				if (packet instanceof BufferHeaderPacket)
-					this.buffers.handleBufferHeaderPacket((BufferHeaderPacket) packet);
+					this.bufferManager.handleBufferHeaderPacket((BufferHeaderPacket) packet);
 			break;
 			case Packet.CODE_USERPACKET:
 				if (packet instanceof UserPacket)
@@ -135,26 +128,21 @@ public class Client extends Thread implements IdGenerator {
 	}
 
 	private void sendPacketConfirmation(Packet packet) {
-		int a = new Random().ints(0, 2).findFirst().getAsInt();
-		System.out.println("Packet arrived with QoS 1: " + packet.toString());
-		System.out.println(a);
-		if (a < 1) {
-			ConfirmationPacket confirmationPacket = new ConfirmationPacket(this.nextId());
-			confirmationPacket.setPacketToConfirmId(packet.getId());
-			this.send(confirmationPacket);
-		}
+		ConfirmationPacket confirmationPacket = new ConfirmationPacket(this.nextId());
+		confirmationPacket.setPacketToConfirmId(packet.getId());
+		this.send(confirmationPacket);
 	}
 
 	private void handleUserPacket(UserPacket packet) {
 		this.setUser(packet.getUser());
 	}
 
-	public Buffers getBuffers() {
-		return buffers;
+	public BufferManager getBufferManager() {
+		return bufferManager;
 	}
 
-	public void setBuffers(Buffers buffers) {
-		this.buffers = buffers;
+	public void setBufferManager(BufferManager bufferManager) {
+		this.bufferManager = bufferManager;
 	}
 
 	public void close() {
@@ -170,8 +158,7 @@ public class Client extends Thread implements IdGenerator {
 	}
 
 	public synchronized void send(List<Packet> packets) {
-		for (Packet packet : packets)
-			this.packets.add(packet);
+		this.packets.addAll(packets);
 	}
 
 	public synchronized List<ClientAdapter> getClientAdapters() {
@@ -196,6 +183,10 @@ public class Client extends Thread implements IdGenerator {
 		this.getClientAdapters().remove(adapter);
 	}
 
+	public synchronized UnconfirmedPacketManager getUnconfirmedPacketManager() {
+		return this.unconfirmedPacketManager;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -210,7 +201,7 @@ public class Client extends Thread implements IdGenerator {
 			return true;
 		if (obj == null)
 			return false;
-		if (getClass() != obj.getClass())
+		if (!(obj instanceof Client))
 			return false;
 		Client other = (Client) obj;
 		if (socket == null) {

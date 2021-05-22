@@ -5,7 +5,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import app.users.User;
-import net.buffer.Buffers;
+import net.buffer.BufferManager;
 import net.client.events.ClientAdapter;
 import net.client.events.PacketArrivedEvent;
 import net.client.threads.ReadThread;
@@ -21,7 +21,7 @@ public class Client extends Thread {
 	
 	private Server server;
 
-	private Buffers buffers;
+	private BufferManager bufferManager;
 
 	private Socket socket;
 	private boolean isLive;
@@ -42,7 +42,7 @@ public class Client extends Thread {
 		this.setPackets(new LinkedList<Packet>());
 		this.setServer(server);
 		this.setSocket(socket);
-		this.setBuffers(new Buffers(this));
+		this.setBufferManager(new BufferManager(this));
 	}
 
 	@Override
@@ -82,13 +82,7 @@ public class Client extends Thread {
 
 	public synchronized List<Packet> clearPackets() {
 		List<Packet> packets = this.getPackets();
-		for (Packet packet : packets) {
-			if (packet.getQos() == Packet.QOS_LEVEL_1) {
-				this.unconfirmedPacketManager.add(packet);
-			}
-		}
 		this.packets = new LinkedList<Packet>();
-
 		// Add uncofirmed packets that need to be resent
 		packets.addAll(this.unconfirmedPacketManager.getResendPackets());
 		return packets;
@@ -131,7 +125,7 @@ public class Client extends Thread {
 			break;
 			case Packet.CODE_BUFFERHEADER:
 				if (packet instanceof BufferHeaderPacket)
-					this.buffers.handleBufferHeaderPacket((BufferHeaderPacket) packet);
+					this.bufferManager.handleBufferHeaderPacket((BufferHeaderPacket) packet);
 			break;
 			case Packet.CODE_USERPACKET:
 				if (packet instanceof UserPacket)
@@ -153,12 +147,12 @@ public class Client extends Thread {
 		this.setUser(packet.getUser());
 	}
 
-	public Buffers getBuffers() {
-		return buffers;
+	public BufferManager getBufferManager() {
+		return bufferManager;
 	}
 
-	public void setBuffers(Buffers buffers) {
-		this.buffers = buffers;
+	public void setBufferManager(BufferManager bufferManager) {
+		this.bufferManager = bufferManager;
 	}
 
 	public void close() {
@@ -170,8 +164,7 @@ public class Client extends Thread {
 	}
 
 	public synchronized void send(List<Packet> packets) {
-		for (Packet packet : packets)
-			this.packets.add(packet);
+		this.packets.addAll(packets);
 	}
 
 	public synchronized List<ClientAdapter> getClientAdapters() {
@@ -196,6 +189,10 @@ public class Client extends Thread {
 		this.getClientAdapters().remove(adapter);
 	}
 
+	public synchronized UnconfirmedPacketManager getUnconfirmedPacketManager() {
+		return this.unconfirmedPacketManager;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -210,7 +207,7 @@ public class Client extends Thread {
 			return true;
 		if (obj == null)
 			return false;
-		if (getClass() != obj.getClass())
+		if (!(obj instanceof Client))
 			return false;
 		Client other = (Client) obj;
 		if (socket == null) {

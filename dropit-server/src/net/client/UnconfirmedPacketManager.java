@@ -9,7 +9,7 @@ public class UnconfirmedPacketManager {
 	public static final int WAIT_TIME = 15;
 	public List<UnconfirmedPacket> unconfirmedPackets = new LinkedList<UnconfirmedPacket>();
 
-	public boolean contains(Packet packet) {
+	public synchronized boolean contains(Packet packet) {
 		for (UnconfirmedPacket unconfirmedPacket : this.unconfirmedPackets) {
 			if (packet.equals(unconfirmedPacket.getPacket())) {
 				return true;
@@ -18,7 +18,7 @@ public class UnconfirmedPacketManager {
 		return false;
 	}
 
-	public void add(Packet packet) {
+	public synchronized void add(Packet packet) {
 		if (!this.contains(packet)) {
 			UnconfirmedPacket newUnconfirmedPacket = new UnconfirmedPacket(
 				packet, 
@@ -28,7 +28,7 @@ public class UnconfirmedPacketManager {
 		}
 	}
 
-	public void remove(Packet packet) {
+	public synchronized void remove(Packet packet) {
 		UnconfirmedPacket placeholderPacket = new UnconfirmedPacket(packet, 0);
 		this.unconfirmedPackets.remove(placeholderPacket);
 	}

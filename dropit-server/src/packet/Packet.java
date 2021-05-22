@@ -90,7 +90,7 @@ public class Packet implements java.io.Serializable {
 			return true;
 		if (obj == null)
 			return false;
-		if (getClass() != obj.getClass())
+		if (!(obj instanceof Packet))
 			return false;
 		Packet other = (Packet) obj;
 		if (this.getId() != other.getId())

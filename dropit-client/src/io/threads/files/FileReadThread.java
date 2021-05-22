@@ -12,7 +12,7 @@ import io.events.FileReadAdapter;
 import io.events.FileReadEvent;
 import net.client.Client;
 import packet.Packet;
-import packet.types.BufferHeaderPacket;
+import packet.types.FileHeaderPacket;
 import packet.types.FilePacket;
 
 public class FileReadThread extends Thread {
@@ -29,7 +29,7 @@ public class FileReadThread extends Thread {
 	public FileReadThread(File file, Client client, IOManager ioManager) {
 		this.setFile(file);
 		this.setIoManager(ioManager);
-		this.setClient(client);
+		this.getClient(client);
 	}
 
 	@Override
@@ -38,7 +38,7 @@ public class FileReadThread extends Thread {
 			this.packets = new LinkedList<Packet>();
 
 			try (FileInputStream fr = new FileInputStream(this.file)) {
-				BufferHeaderPacket fileHeaderPacket = this.getBufferHeader();
+				FileHeaderPacket fileHeaderPacket = this.getFileHeader();
 				this.packets.add(fileHeaderPacket);
 
 				while (fr.available() > 0) {
@@ -78,11 +78,20 @@ public class FileReadThread extends Thread {
 		this.fileReadAdapters.add(adapter);
 	}
 
-	public BufferHeaderPacket getBufferHeader() {
-		BufferHeaderPacket bufferHeaderPacket = new BufferHeaderPacket(this.client.nextId());
-		bufferHeaderPacket.setBufferId(this.ioManager.nextId());
+	public FileHeaderPacket getFileHeader() {
+		FileHeaderPacket fileHeaderPacket = new FileHeaderPacket(this.client.nextId());
+			
+		String[] nameChunks = this.file.getName().split("\\.");
+		String extension = nameChunks[nameChunks.length - 1];
+		StringBuilder name = new StringBuilder();
+		for (int i = 0; i < nameChunks.length - 1; i++)
+			name.append(nameChunks[i]);
+		
+		fileHeaderPacket.setFileName(name.toString());
+		fileHeaderPacket.setFileExtension(extension);
+		fileHeaderPacket.setBufferId(this.ioManager.nextId());
 
-		return bufferHeaderPacket;
+		return fileHeaderPacket;
 	}
 
 	public List<FileReadAdapter> getFileReadAdapters() {
@@ -101,20 +110,20 @@ public class FileReadThread extends Thread {
 		this.file = file;
 	}
 
-	public Client getClient() {
-		return client;
-	}
-
-	public void setClient(Client client) {
-		this.client = client;
-	}
-
 	public List<Packet> getPackets() {
 		return packets;
 	}
 
 	public void setPackets(List<Packet> packets) {
 		this.packets = packets;
+	}
+
+	public Client getClient() {
+		return client;
+	}
+
+	public void getClient(Client client) {
+		this.client = client;
 	}
 
 	public IOManager getIoManager() {

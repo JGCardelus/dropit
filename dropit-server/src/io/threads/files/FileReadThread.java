@@ -80,7 +80,7 @@ public class FileReadThread extends Thread {
 	public FileHeaderPacket getFileHeader() {
 		FileHeaderPacket fileHeaderPacket = new FileHeaderPacket(this.server.nextId());
 
-		String[] nameChunks = this.file.getName().split(".");	
+		String[] nameChunks = this.file.getName().split("\\.");	
 		String extension = nameChunks[nameChunks.length - 1];
 		StringBuilder name = new StringBuilder();
 		for (int i = 0; i < nameChunks.length - 1; i++)

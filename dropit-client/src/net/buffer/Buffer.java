@@ -5,11 +5,14 @@ import java.util.List;
 
 import net.buffer.events.BufferAdapter;
 import net.buffer.events.BufferCompleteEvent;
+import net.buffer.events.BufferNewPacketEvent;
+import net.buffer.events.FileCompleteEvent;
 import net.client.Client;
 import net.client.events.ClientAdapter;
 import net.client.events.PacketArrivedEvent;
 import packet.Packet;
 import packet.types.BufferHeaderPacket;
+import packet.types.FileHeaderPacket;
 
 public class Buffer {
 	private Client client;
@@ -25,7 +28,6 @@ public class Buffer {
 
 	public Buffer(BufferHeaderPacket bufferHeaderPacket, Client client) {
 		this.setPacketIds(bufferHeaderPacket.getPacketIds());
-		System.out.println(bufferHeaderPacket.getPacketIds());
 		this.setHeader(bufferHeaderPacket);
 		this.setClient(client);
 		this.initPacketArrivedListener();
@@ -73,23 +75,30 @@ public class Buffer {
 	}
 
 	private void checkBufferState() {
-		int packetsCount = 0;
-		for (Packet packet : this.packets) {
-			if (packet != null) {
-				packetsCount += 1;
-			}
-		}
+		int packetsCount = this.getPacketsCount();
+
 		if (packetsCount ==this.packetIds.size()) {
 			this.setComplete(true);
 			this.client.removeClientListener(this.getAdapter());
 			this.triggerOnBufferComplete();
 		}
 	}
+
+	private int getPacketsCount() {
+		int packetsCount = 0;
+		for (Packet packet : this.packets) {
+			if (packet != null) {
+				packetsCount += 1;
+			}
+		}
+		return packetsCount;
+	}
 	
 	private void handlePacket(Packet packet) {
 		if (this.packetIds.contains(packet.getId())) {
 			int index = this.packetIds.indexOf(packet.getId());
 			this.packets.add(index, packet);
+			this.triggerOnBufferNewPacket(packet);
 			this.checkBufferState();
 		}
 	}
@@ -103,14 +112,41 @@ public class Buffer {
 		});
 	}
 
-	public void triggerOnBufferComplete() {
+	private void triggerOnBufferNewPacket(Packet packet) {
+		BufferNewPacketEvent event = new BufferNewPacketEvent(this, packet);
+		for (BufferAdapter adapter : this.bufferAdapters) {
+			adapter.onBufferNewPacket(event);
+		}
+	}
+
+	private void triggerOnBufferComplete() {
 		BufferCompleteEvent event = new BufferCompleteEvent(this.getHeader(), this.getPackets());
 		for (BufferAdapter adapter : this.bufferAdapters) {
 			adapter.onBufferComplete(event);
+		}
+
+		// An if-else statement would better for this block
+		// but since it might grow, keeping as switch
+		switch (this.getHeader().getBufferType()) {
+			case FileHeaderPacket.BUFFER_TYPE:
+				this.triggerOnFileComplete();
+			break;
+		}
+	}
+
+	private void triggerOnFileComplete() {
+		if (this.getHeader() instanceof FileHeaderPacket) {
+			FileCompleteEvent event = new FileCompleteEvent((FileHeaderPacket) this.getHeader(), this.getPackets());
+			for (BufferAdapter adapter : this.bufferAdapters)
+				adapter.onFileComplete(event);
 		}
 	}
 
 	public void addBufferListener(BufferAdapter adapter) {
 		this.bufferAdapters.add(adapter);
+	}
+
+	public int getPercentage() {
+		return this.getPacketsCount() / this.packetIds.size() * 100;
 	}
 }

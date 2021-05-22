@@ -5,6 +5,7 @@ import java.net.Socket;
 
 import net.client.Client;
 import net.server.Server;
+import net.server.events.ServerNewClientEvent;
 
 public class AcceptThread extends Thread {
 	private Server server;
@@ -26,7 +27,9 @@ public class AcceptThread extends Thread {
 			this.server.addClient(newClient);
 			// Start the client
 			newClient.start();
-			System.out.println("New client accepted");
+			// Notify new client
+			this.server.triggerOnServerNewClient(new ServerNewClientEvent(newClient));
+			System.out.println("Client connected");
 
 		} catch (IOException ioe) {
 			ioe.printStackTrace();

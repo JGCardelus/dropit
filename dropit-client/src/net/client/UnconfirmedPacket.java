@@ -22,9 +22,29 @@ public class UnconfirmedPacket {
 	public void setStart(int start) {
 		this.start = start;
 	}
-
 	@Override
-	public boolean equals(Object object) {
-		return packet.equals(object);
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((packet == null) ? 0 : packet.hashCode());
+		return result;
 	}
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (!(obj instanceof UnconfirmedPacket))
+			return false;
+		UnconfirmedPacket other = (UnconfirmedPacket) obj;
+		if (packet == null) {
+			if (other.packet != null)
+				return false;
+		} else if (!packet.equals(other.packet))
+			return false;
+		return true;
+	}
+
+	
 }

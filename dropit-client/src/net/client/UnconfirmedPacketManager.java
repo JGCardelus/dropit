@@ -6,14 +6,19 @@ import java.util.List;
 import packet.Packet;
 
 public class UnconfirmedPacketManager {
-	public static final int WAIT_TIME = 10;
+	public static final int WAIT_TIME = 15;
 	public List<UnconfirmedPacket> unconfirmedPackets = new LinkedList<UnconfirmedPacket>();
 
-	public boolean contains(Object object) {
-		return unconfirmedPackets.contains(object);
+	public synchronized boolean contains(Packet packet) {
+		for (UnconfirmedPacket unconfirmedPacket : this.unconfirmedPackets) {
+			if (packet.equals(unconfirmedPacket.getPacket())) {
+				return true;
+			}
+		}
+		return false;
 	}
 
-	public void add(Packet packet) {
+	public synchronized void add(Packet packet) {
 		if (!this.contains(packet)) {
 			UnconfirmedPacket newUnconfirmedPacket = new UnconfirmedPacket(
 				packet, 
@@ -23,8 +28,9 @@ public class UnconfirmedPacketManager {
 		}
 	}
 
-	public void remove(Object object) {
-		this.unconfirmedPackets.remove(object);
+	public synchronized void remove(Packet packet) {
+		UnconfirmedPacket placeholderPacket = new UnconfirmedPacket(packet, 0);
+		this.unconfirmedPackets.remove(placeholderPacket);
 	}
 
 	public synchronized List<Packet> getResendPackets() {
@@ -37,9 +43,8 @@ public class UnconfirmedPacketManager {
 			}
 		}
 
-		if (!packets.isEmpty()) {
-			System.out.println("Resending:");
-			System.out.println(packets);
+		if (packets.size() > 0) {
+			System.out.println("Resending");
 		}
 
 		return packets;

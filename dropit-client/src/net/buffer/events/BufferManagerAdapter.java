@@ -1,6 +1,6 @@
 package net.buffer.events;
 
-public abstract class BuffersAdapter {
+public abstract class BufferManagerAdapter {
 	public void onNewBuffer(NewBufferEvent event) {}
 	public void onBufferComplete(BufferCompleteEvent event) {}
 
