@@ -10,9 +10,8 @@ public class DownloadsWindow extends Window {
 
 	public DownloadsWindow(API api, App app) {
 		super(DOWNLOADS_WINDOW_TITLE, api, app);
-
 		// Create and start downloads table
 		DownloadsTable downloadsTable = new DownloadsTable(this.getApi());
-		this.add(downloadsTable);
+		this.addToWindow(downloadsTable);
 	}
 }

@@ -4,6 +4,8 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.util.LinkedList;
+import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -13,10 +15,14 @@ import javax.swing.border.Border;
 
 import api.API;
 import ui.downloads.DownloadsWindow;
+import ui.drop.DropWindow;
+import ui.generic.Menu;
+import ui.settings.SettingsWindow;
 
 public class App extends JFrame {
-	public static final int MIN_WINDOW_Y = 600;
+	public static final int MIN_WINDOW_Y = 900;
 	public static final int MIN_WINDOW_X = 800;
+	public static final int INFINITE_SIZE = 1000000;
 
 	public static final int SMALL_MARGIN_SIZE = 5;
 	public static final int MARGIN_SIZE = 10;
@@ -26,12 +32,23 @@ public class App extends JFrame {
 
 	public static final String MAIN_TITLE = "DropIt";
 
-	public static final String FONT_FAMILY = "Roboto";
+	public static final String FONT_FAMILY = "Verdana";
 	public static final Font TITLE_1_FONT = new Font(FONT_FAMILY, Font.BOLD, 36);
 	public static final Font TITLE_2_FONT = new Font(FONT_FAMILY, Font.PLAIN, 24);
 	public static final Font TITLE_3_FONT = new Font(FONT_FAMILY, Font.BOLD, 18);
 
+	public static final Font P_FONT = new Font(FONT_FAMILY, Font.PLAIN, 14);
+
 	private API api;
+
+	private Menu menu;
+	private JPanel frame;
+
+	// Windows
+	private List<Window> windows = new LinkedList<Window>();
+	private DownloadsWindow downloadsWindow;
+	private DropWindow dropWindow;
+	private SettingsWindow settingsWindow;
 
 	public static void main(String args[]) {
 		new App();
@@ -42,19 +59,23 @@ public class App extends JFrame {
 		this.api = new API();
 		this.api.start();
 
+		this.menu = new Menu(this.api, this);
+
 		// Define JFrame
-		JPanel frame = new JPanel();
-		frame.setLayout(new BoxLayout(frame, BoxLayout.Y_AXIS));
-		frame.setMinimumSize(new Dimension(MIN_WINDOW_X, MIN_WINDOW_Y));
-		frame.setPreferredSize(new Dimension(MIN_WINDOW_X, MIN_WINDOW_Y));
+		this.frame = new JPanel();
+		this.frame.setLayout(new BoxLayout(frame, BoxLayout.Y_AXIS));
+		this.frame.setMinimumSize(new Dimension(MIN_WINDOW_X, MIN_WINDOW_Y));
+		this.frame.setPreferredSize(new Dimension(MIN_WINDOW_X, MIN_WINDOW_Y));
 
-		// DropWindow dropWindow = new DropWindow(this.api, this);
-		// frame.add(dropWindow, BorderLayout.CENTER);
+		this.downloadsWindow = new DownloadsWindow(this.api, this);
+		this.dropWindow = new DropWindow(this.api, this);
+		this.settingsWindow = new SettingsWindow(this.api, this);
 
-		// TEST
-		frame.add(new DownloadsWindow(this.api, this), BorderLayout.CENTER);
-		// Define row logic
+		// Initial state
+		this.open(this.dropWindow.getWindowPosition());
 		
+		this.frame.add(this.menu, BorderLayout.SOUTH);
+
 		this.add(frame);
 		this.setResizable(true);
 		this.setTitle(MAIN_TITLE);
@@ -82,5 +103,30 @@ public class App extends JFrame {
 			leftRightMarginSize, 
 			topBottomMarginSize, 
 			leftRightMarginSize);
+	}
+
+	public void open(int window) {
+		this.menu.open(window);
+		
+		if (window < this.windows.size()) {
+			for (int i = 0; i < this.windows.size(); i++) {
+				if (i != window) {
+					this.windows.get(i).close();
+				}
+			}
+
+			this.windows.get(window).open();
+		}
+	}
+
+	public Menu getMenu() {
+		return this.menu;
+	}
+
+	public int addWindow(Window window) {
+		this.windows.add(window);
+		this.frame.add(window, BorderLayout.CENTER);
+		window.close();
+		return this.menu.addButton(window.getTitle());
 	}
 }

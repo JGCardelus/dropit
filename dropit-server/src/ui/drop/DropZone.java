@@ -11,6 +11,8 @@ import java.awt.dnd.DropTargetAdapter;
 import java.awt.dnd.DropTargetDragEvent;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.dnd.DropTargetEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -18,6 +20,8 @@ import java.util.TooManyListenersException;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
@@ -26,6 +30,7 @@ import ui.App;
 
 public class DropZone extends JPanel {
 	private API api;
+	private DropWindow dropWindow;
 	private DropTarget dropTarget;
 
 	public static final String DEFAULT_MESSAGE = "Arrastra archivos aquí";
@@ -35,12 +40,13 @@ public class DropZone extends JPanel {
 	public static final Color DEFAULT_COLOR = App.BACKGROUND_COLOR;
 	public static final Color ON_DRAG_COLOR = new Color(200, 200, 200);
 
-	public static final int HEIGHT = 200;
+	public static final int HEIGHT = 400;
 
 	private JLabel lblDropInformation;
 
-	public DropZone(API api) {
+	public DropZone(API api, DropWindow dropWindow) {
 		this.api = api;
+		this.dropWindow = dropWindow;
 		this.setDropTarget();
 		
 		// Set JPanel properties
@@ -52,7 +58,7 @@ public class DropZone extends JPanel {
 			5f,
 			2f,
 			true));
-		this.lblDropInformation.setMaximumSize(new Dimension(App.MIN_WINDOW_X - 2*App.MARGIN_SIZE, HEIGHT));
+		this.lblDropInformation.setMaximumSize(new Dimension(App.INFINITE_SIZE, HEIGHT));
 		this.lblDropInformation.setHorizontalAlignment(JLabel.CENTER);		
 
 		this.setBorder(BorderFactory.createEmptyBorder(App.MARGIN_SIZE, App.MARGIN_SIZE, App.MARGIN_SIZE, App.MARGIN_SIZE));
@@ -87,7 +93,7 @@ public class DropZone extends JPanel {
 					try {
 						List<File> files = (List<File>) event.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
 						for (File file : files)
-							DropZone.this.api.send(file);
+							DropZone.this.dropWindow.send(file);
 					} catch (UnsupportedFlavorException ufe) {
 						ufe.printStackTrace();
 					} catch (IOException ioe) {

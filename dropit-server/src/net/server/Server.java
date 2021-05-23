@@ -95,6 +95,11 @@ public class Server extends Thread implements IdGenerator {
 			client.send(packets);
 	}
 
+	public void propagate(Packet packet) {
+		for (Client client : this.getClients())
+			client.send(packet);
+	}
+
 	public synchronized List<ServerAdapter> getServerAdapters() {
 		return this.serverAdapters;
 	}

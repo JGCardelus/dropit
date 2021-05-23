@@ -13,10 +13,9 @@ import javax.swing.SwingUtilities;
 import api.API;
 import api.events.ApiAdapter;
 import net.buffer.events.NewFileEvent;
-import packet.types.FileHeaderPacket;
 
 public class DownloadsTable extends JPanel {
-	public static final Color HEADER_BACKGROUND_COLOR = new Color(210,210,210);
+	public static final Color HEADER_BACKGROUND_COLOR = new Color(255, 184, 28);
 	
 	private JPanel rows;
 	private API api;

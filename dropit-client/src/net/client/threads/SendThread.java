@@ -92,7 +92,10 @@ public class SendThread extends Thread {
 			if (packet.getPriority() == Packet.MAX_PRIORITY) {
 				this.packets.add(0, packet);
 			} else if (packet.getPriority() == Packet.MID_PRIORITY) {
-				this.packets.add(1, packet);
+				int index = 1;
+				if (this.packets.size() == 0) 
+					index = 0;
+				this.packets.add(index, packet);
 			} else {
 				this.packets.add(packet);
 			}

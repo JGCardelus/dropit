@@ -1,10 +1,13 @@
 package api;
 
 import java.io.File;
+import java.net.Inet4Address;
+import java.net.UnknownHostException;
 import java.util.LinkedList;
 import java.util.List;
 
 import api.events.ApiAdapter;
+import app.users.User;
 import io.IOManager;
 import io.events.FileReadAdapter;
 import io.events.FileReadEvent;
@@ -14,9 +17,12 @@ import net.buffer.events.BufferManagerAdapter;
 import net.buffer.events.FileCompleteEvent;
 import net.buffer.events.NewFileEvent;
 import net.client.Client;
+import net.client.events.ClientAdapter;
+import net.client.events.UpdateUserEvent;
 import net.server.Server;
 import net.server.events.ServerAdapter;
 import net.server.events.ServerNewClientEvent;
+import packet.types.UserPacket;
 
 /**
  * Wrapper around IOManager and Server for easy interaction between backend
@@ -25,8 +31,12 @@ import net.server.events.ServerNewClientEvent;
 public class API {
 	private Server server;
 	private IOManager io;
+	private User user;
 
-	private String filePath;
+	private String ip;
+	private String roomCode;
+
+	private String filePath = System.getProperty("user.dir");
 
 	private List<ApiAdapter> apiAdapters = new LinkedList<ApiAdapter>();
 
@@ -38,13 +48,35 @@ public class API {
 		this.server.addServerListener(new ServerAdapter() {
 			@Override
 			public void onServerNewClient(ServerNewClientEvent event) {
-				API.this.handleNewClient(event.getClient());
+				API.this.handleNewClient(event);
 			}
 		});
 	}
 
 	public void start() {
 		this.server.start();
+		this.setIp();
+	}
+
+	public void setIp() {
+		try {
+			this.ip = Inet4Address.getLocalHost().getHostAddress();
+		} catch (UnknownHostException e) {
+			this.ip = "127.0.0.1"; // Enter loopback mode
+		}
+		this.setRoomCode();
+	}
+
+	public String getIp() {
+		return this.ip;
+	}
+
+	public void setRoomCode() {
+		this.roomCode = this.ip.split("\\.")[3];
+	}
+
+	public String getRoomCode() {
+		return this.roomCode;
 	}
 
 	public void send(File file) {
@@ -57,6 +89,19 @@ public class API {
 				System.out.println("File sent");
 			}
 		});
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+		if (this.server.isAlive()) {
+			UserPacket userPacket = new UserPacket(this.server.nextId());
+			userPacket.setUser(user);
+			this.server.propagate(userPacket);
+		}
+	}
+
+	public User getUser() {
+		return this.user;
 	}
 
 	private void handleFileComplete(FileCompleteEvent event) {
@@ -91,11 +136,24 @@ public class API {
 		}
 	}
 
+	public void triggerOnNewClient(ServerNewClientEvent event) {
+		for (ApiAdapter apiAdapter : this.apiAdapters) {
+			apiAdapter.onNewClient(event);
+		}
+	}
+
+	public void triggerUpdateUser(UpdateUserEvent event) {
+		for (ApiAdapter apiAdapter : this.apiAdapters) {
+			apiAdapter.onUpdateUser(event);
+		}
+	}
+
 	private void handleNewFile(NewFileEvent event) {
 		this.triggerOnNewFile(event);
 	}
 
-	private void handleNewClient(Client client) {
+	private void handleNewClient(ServerNewClientEvent event) {
+		Client client = event.getClient();
 		client.getBufferManager().addBufferManagerListener(new BufferManagerAdapter() {
 			@Override
 			public void onFileComplete(FileCompleteEvent event) {
@@ -107,6 +165,14 @@ public class API {
 				API.this.handleNewFile(event);
 			}
 		});
+		client.addClientListener(new ClientAdapter() {
+			@Override
+			public void onUpdateUser(UpdateUserEvent event) {
+				API.this.triggerUpdateUser(event);
+			}
+		});
+
+		this.triggerOnNewClient(event);
 	}
 
 	public String getFilePath() {

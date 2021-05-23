@@ -8,6 +8,7 @@ import app.users.User;
 import net.buffer.BufferManager;
 import net.client.events.ClientAdapter;
 import net.client.events.PacketArrivedEvent;
+import net.client.events.UpdateUserEvent;
 import net.client.threads.ReadThread;
 import net.client.threads.SendThread;
 import net.server.Server;
@@ -145,6 +146,7 @@ public class Client extends Thread {
 
 	private void handleUserPacket(UserPacket packet) {
 		this.setUser(packet.getUser());
+		this.triggerUserUpdate();
 	}
 
 	public BufferManager getBufferManager() {
@@ -173,12 +175,19 @@ public class Client extends Thread {
 
 	public synchronized void triggerPacketArrived(Packet packet) {
 		PacketArrivedEvent event = new PacketArrivedEvent(packet);
-		List<ClientAdapter> adapters = this.getClientAdapters();
-		for (int i = 0; i < adapters.size(); i++) {
-			adapters.get(i).onPacketArrived(event);
+		for (ClientAdapter adapter : this.clientAdapters) {
+			adapter.onPacketArrived(event);
 		}
 		
 	}
+
+	private void triggerUserUpdate() {
+		UpdateUserEvent event = new UpdateUserEvent(this);
+		for (ClientAdapter adapter : this.clientAdapters) {
+			adapter.onUpdateUser(event);
+		}
+	}
+
 
 	public ClientAdapter addClientListener(ClientAdapter adapter) {
 		this.getClientAdapters().add(adapter);
