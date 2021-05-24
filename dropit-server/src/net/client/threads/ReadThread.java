@@ -6,6 +6,9 @@ import java.io.ObjectInputStream;
 import net.client.Client;
 import packet.Packet;
 
+/**
+ * Thread in charge of listening to incoming {@link Packet}
+ */
 public class ReadThread extends Thread {
 	private Client client;
 

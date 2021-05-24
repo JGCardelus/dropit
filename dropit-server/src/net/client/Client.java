@@ -17,6 +17,10 @@ import packet.types.BufferHeaderPacket;
 import packet.types.ConfirmationPacket;
 import packet.types.UserPacket;
 
+/**
+ * The Client class is in charge of handling data flow between the client
+ * and the application.
+ */
 public class Client extends Thread {
 	public static final int MID_PRIORITY_CLEAR_RATE = 4;
 	
@@ -81,6 +85,12 @@ public class Client extends Thread {
 		this.packets = packets;
 	}
 
+	/**
+	 * Returns the list of {@link Packet} that need to be sent and deletes them.
+	 * It also adds the packages that haven't been confirmed (they've haven't reached the
+	 * client).
+	 * @return
+	 */
 	public synchronized List<Packet> clearPackets() {
 		List<Packet> packets = this.getPackets();
 		this.packets = new LinkedList<Packet>();
@@ -89,7 +99,10 @@ public class Client extends Thread {
 		return packets;
 	}
 
-	// Check that package has been sent
+	/**
+	 * Checks that a packet has been received by the client.
+	 * @param packet
+	 */
 	public void confirmPacket(Packet packet) {
 		if (packet instanceof ConfirmationPacket) {
 			// Create placholder packet
@@ -115,6 +128,10 @@ public class Client extends Thread {
 		this.socket = socket;
 	}
 
+	/**
+	 * Handles incoming packets based on the packet code. 
+	 * @param packet
+	 */
 	public synchronized void handlePacket(Packet packet) {
 		if (packet.getQos() == Packet.QOS_LEVEL_1) {
 			this.sendPacketConfirmation(packet);
@@ -138,12 +155,20 @@ public class Client extends Thread {
 		}
 	}
 
+	/**
+	 * Informs the client that a packet has been received.
+	 * @param packet
+	 */
 	private synchronized void sendPacketConfirmation(Packet packet) {
 		ConfirmationPacket confirmationPacket = new ConfirmationPacket(this.server.nextId());
 		confirmationPacket.setPacketToConfirmId(packet.getId());
 		this.send(confirmationPacket);
 	}
 
+	/**
+	 * Handles a packet containing user information {@link UserPacket}.
+	 * @param packet
+	 */
 	private synchronized void handleUserPacket(UserPacket packet) {
 		this.setUser(packet.getUser());
 		this.triggerUserUpdate();
@@ -157,16 +182,28 @@ public class Client extends Thread {
 		this.bufferManager = bufferManager;
 	}
 
+	/**
+	 * Finalizes the connection with the client. It also stops the {@link SendThread}
+	 * and {@link ReadThread}
+	 */
 	public void close() {
 		this.sendThread.interrupt();
 		this.readThread.interrupt();
 		this.server.close(this);
 	}
 
+	/**
+	 * Sends a Packet to the client.
+	 * @param packet
+	 */
 	public synchronized void send(Packet packet) {
 		this.packets.add(packet);
 	}
 
+	/**
+	 * Sends a list of Packets to the client.
+	 * @param packets
+	 */
 	public synchronized void send(List<Packet> packets) {
 		this.packets.addAll(packets);
 	}
@@ -190,7 +227,11 @@ public class Client extends Thread {
 		}
 	}
 
-
+	/**
+	 * Adds a {@link ClientAdapter} to the listeners.
+	 * @param adapter
+	 * @return
+	 */
 	public synchronized ClientAdapter addClientListener(ClientAdapter adapter) {
 		this.getClientAdapters().add(adapter);
 		return adapter;

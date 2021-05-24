@@ -1,5 +1,24 @@
 package packet;
 
+/**
+ * The data sent through the network is encapsulated in Packets. Packets
+ * allow to easily differentiate messages and to define how the network should
+ * handle them.
+ * 
+ * The QoS (Quality of Service) behaves similarly to the MQTT protocol. LEVEL_0 means
+ * that the Packet doesn't need to be confirmed by the receiver. LEVEL_1 Packet's need
+ * confirmation.
+ * 
+ * The Priority tells the {@link net.client.threads.SendThread} how fast the Packet
+ * should be sent. MAX_PRIORITY: the packet must be sent inmediately. MID_PRIORITY: send
+ * the packet A.S.A.P but do not force it. NO_PRIORITY: send the packet whenever it can.
+ * 
+ * The Code tells the {@link net.client.Client} what the Packet contains. Common Packet codes include
+ * 100 -> A Packet to confirm another Packet
+ * 200 -> A {@link packet.types.BufferHeaderPacket} (start of a multi-packet message)
+ * 201 -> A packet containing bytes from a file ({@link packet.types.FilePacket})
+ * 300 -> A packet containing user information
+ */
 public class Packet implements java.io.Serializable {
 	public static final int QOS_LEVEL_0 = 0;
 	public static final int QOS_LEVEL_1 = 1;

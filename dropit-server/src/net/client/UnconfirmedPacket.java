@@ -2,10 +2,15 @@ package net.client;
 
 import packet.Packet;
 
+/**
+ * {@link Packet} that needs to be confirmed. It is used by
+ * the {@link UnconfirmedPacketManager}. It stores when the Packet was sent
+ * to know when it has to be resent.
+ */
 public class UnconfirmedPacket {
 	private Packet packet;
 	private int start;
-
+	
 	public UnconfirmedPacket(Packet packet, int start) {
 		this.setPacket(packet);
 		this.setStart(start);

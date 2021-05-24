@@ -14,6 +14,11 @@ import packet.Packet;
 import packet.types.BufferHeaderPacket;
 import packet.types.FileHeaderPacket;
 
+/**
+ * If a messages is stored in multiple packets it is handled by the {@link Buffer} class.
+ * Buffer will retrieve all the packets from the messages and compose the original message.
+ * Check {@link BufferManager} to understand multi-packet messages.
+ */
 public class Buffer {
 	private Client client;
 	private BufferHeaderPacket header;
@@ -77,6 +82,9 @@ public class Buffer {
 		return this.adapter;
 	}
 
+	/**
+	 * Checks if the buffer is complete.
+	 */
 	private void checkBufferState() {
 		int packetsCount = this.getPacketsCount();
 
@@ -87,6 +95,10 @@ public class Buffer {
 		}
 	}
 
+	/**
+	 * Gets the number of retrived packets.
+	 * @return
+	 */
 	private int getPacketsCount() {
 		int packetsCount = 0;
 		for (Packet packet : this.packets) {
@@ -97,6 +109,11 @@ public class Buffer {
 		return packetsCount;
 	}
 	
+	/**
+	 * Handles incoming packages. Checks if they belong to the Buffer and if so,
+	 * what part of the complete message that packet contains.
+	 * @param packet
+	 */
 	private void handlePacket(Packet packet) {
 		if (this.packetIds.contains(packet.getId())) {
 			int index = this.packetIds.indexOf(packet.getId());

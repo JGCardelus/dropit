@@ -7,6 +7,10 @@ import net.client.Client;
 import net.server.Server;
 import net.server.events.ServerNewClientEvent;
 
+/**
+ * The AcceptThread handles incoming clients. It is separated from the
+ * server to avoid blocking.
+ */
 public class AcceptThread extends Thread {
 	private Server server;
 
@@ -29,7 +33,6 @@ public class AcceptThread extends Thread {
 			newClient.start();
 			// Notify new client
 			this.server.triggerOnServerNewClient(new ServerNewClientEvent(newClient));
-			System.out.println("Client connected");
 
 		} catch (IOException ioe) {
 			ioe.printStackTrace();

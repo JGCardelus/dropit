@@ -9,6 +9,10 @@ import java.util.List;
 import net.client.Client;
 import packet.Packet;
 
+/**
+ * Thread dedicated to getting packets that the {@link Client} wants
+ * to send, organizing them by Priority and sending them.
+ */
 public class SendThread extends Thread {
 	private Client client;
 	private List<Packet> packets;
@@ -28,6 +32,11 @@ public class SendThread extends Thread {
 		this.packets = packets;
 	}
 
+	/**
+	 * Get's the number of packets that the clear methods will scan. It's done
+	 * to avoid long scan times.
+	 * @return
+	 */
 	private int getCheckSize() {
 		int size = this.getPackets().size();
 		if (size > MAX_CHECK_COUNT) {
@@ -36,6 +45,12 @@ public class SendThread extends Thread {
 		return size;
 	}
 
+	/**
+	 * Returns all the {@link Packet} of priority n and deletes them
+	 * from the internal memory.
+	 * @param n
+	 * @return
+	 */
 	public List<Packet> clearPacketsOfPriority(int n) {
 		List<Packet> packets = new LinkedList<Packet>();
 
@@ -52,6 +67,11 @@ public class SendThread extends Thread {
 		return packets;
 	}
 
+	@Deprecated
+	/**
+	 * Removes {@link Packet} from the internal packet list.
+	 * @param ids
+	 */
 	public void removePackets(List<Integer> ids) {
 		for (int i = 0; i < ids.size(); i++) {
 			int k = (int) ids.get(i);
@@ -68,25 +88,32 @@ public class SendThread extends Thread {
 		}
 	}
 
+	/**
+	 * Clears size {@link Packet} of priority n.
+	 * @param n
+	 * @param size
+	 * @return
+	 */
 	public List<Packet> clearPacketsOfPriority(int n, int size) {
 		List<Packet> packets = new LinkedList<Packet>();
 
-		// List<Integer> packetsToRemove = new LinkedList<Integer>();
 		for (int i = 0; i < this.getCheckSize(); i++) {
 			Packet packet = this.getPackets().get(i);
 			if (packet.getPriority() == n) {
 				packets.add(packet);
-				// packetsToRemove.add(i);
 				this.packets.remove(i);
 			}
 			if (packets.size() == size)
 				break;
 		}
 
-		// this.removePackets(packetsToRemove);
 		return packets;
 	}
 
+	/**
+	 * Clears the packets from the Client and stores them based on their
+	 * priority.
+	 */
 	public void clearPackets() {
 		for (Packet packet : this.client.clearPackets()) {
 			if (packet.getPriority() == Packet.MAX_PRIORITY) {
@@ -133,6 +160,12 @@ public class SendThread extends Thread {
 		this.client = client;
 	}
 
+	/**
+	 * Sends a {@link Packet} through the {@link ObjectOutputStream}. If the
+	 * packet has a QOS_LEVEL_1, it sends it to the {@link net.client.UnconfirmedPacketManager}
+	 * @param oos
+	 * @param packet
+	 */
 	private void send(ObjectOutputStream oos, Packet packet) {
 		try {
 			if (packet.getQos() == Packet.QOS_LEVEL_1) {
