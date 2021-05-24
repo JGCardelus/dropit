@@ -48,27 +48,31 @@ public class BufferManager {
 		}
 	}
 
-	public void addBufferManagerListener(BufferManagerAdapter bufferManagerAdapter) {
+	public synchronized void addBufferManagerListener(BufferManagerAdapter bufferManagerAdapter) {
 		this.bufferManagerAdapters.add(bufferManagerAdapter);
 	}
 
-	private void triggerNewFileEvent(NewFileEvent event) {
-		for (BufferManagerAdapter bufferManagerAdapter : this.bufferManagerAdapters)
+	private synchronized List<BufferManagerAdapter> getBufferManagerAdapters() {
+		return this.bufferManagerAdapters;
+	}
+
+	private synchronized void triggerNewFileEvent(NewFileEvent event) {
+		for (BufferManagerAdapter bufferManagerAdapter : this.getBufferManagerAdapters())
 			bufferManagerAdapter.onNewFile(event);
 	}
 
-	private void triggerOnFileComplete(FileCompleteEvent event) {
-		for (BufferManagerAdapter bufferManagerAdapter : this.bufferManagerAdapters)
+	private synchronized void triggerOnFileComplete(FileCompleteEvent event) {
+		for (BufferManagerAdapter bufferManagerAdapter : this.getBufferManagerAdapters())
 			bufferManagerAdapter.onFileComplete(event);
 	}
 
-	private void triggerOnNewBuffer(NewBufferEvent event) {
-		for (BufferManagerAdapter bufferManagerAdapter : this.bufferManagerAdapters)
+	private synchronized void triggerOnNewBuffer(NewBufferEvent event) {
+		for (BufferManagerAdapter bufferManagerAdapter : this.getBufferManagerAdapters())
 			bufferManagerAdapter.onNewBuffer(event);
 	}
 
-	private void triggerOnBufferComplete(BufferCompleteEvent event) {
-		for (BufferManagerAdapter bufferManagerAdapter : this.bufferManagerAdapters)
+	private synchronized void triggerOnBufferComplete(BufferCompleteEvent event) {
+		for (BufferManagerAdapter bufferManagerAdapter : this.getBufferManagerAdapters())
 			bufferManagerAdapter.onBufferComplete(event);
 	}
 

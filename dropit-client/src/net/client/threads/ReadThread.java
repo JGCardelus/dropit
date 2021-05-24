@@ -18,7 +18,7 @@ public class ReadThread extends Thread {
 		try {
 			ObjectInputStream ois = new ObjectInputStream(this.client.getSocket().getInputStream());
 			
-			while (true) {
+			while (!this.isInterrupted()) {
 				Object obj = ois.readObject();
 				this.read(obj);
 			}

@@ -43,10 +43,6 @@ public class UnconfirmedPacketManager {
 			}
 		}
 
-		if (packets.size() > 0) {
-			System.out.println("Resending");
-		}
-
 		return packets;
 	}
 }

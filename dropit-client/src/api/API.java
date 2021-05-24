@@ -1,10 +1,15 @@
 package api;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.LinkedList;
 import java.util.List;
 
 import api.events.ApiAdapter;
+import app.users.User;
 import io.IOManager;
 import io.events.FileReadAdapter;
 import io.events.FileReadEvent;
@@ -14,37 +19,74 @@ import net.buffer.events.BufferManagerAdapter;
 import net.buffer.events.FileCompleteEvent;
 import net.buffer.events.NewFileEvent;
 import net.client.Client;
-import net.server.Server;
-import net.server.events.ServerAdapter;
-import net.server.events.ServerNewClientEvent;
+import net.client.events.ClientAdapter;
+import net.client.events.UpdateUserEvent;
+import packet.types.UserPacket;
 
 /**
  * Wrapper around IOManager and Server for easy interaction between backend
  * and frontend.
  */
 public class API {
-	private Server server;
-	private IOManager io;
+	public static final int PORT = 8008;
 
-	private String filePath;
+	private Client client;
+	private IOManager io;
+	private User user;
+
+	private String ip;
+	private int roomCode;
+
+	private String filePath = System.getProperty("user.home") + "\\Downloads\\test\\";
 
 	private List<ApiAdapter> apiAdapters = new LinkedList<ApiAdapter>();
 
-	public API() {
-		this.server = new Server();
-		this.io = new IOManager(this.server);
+	public API(Socket socket) {
+		this.client = new Client(socket);
+		this.io = new IOManager(this.client);
+	}
 
-		// Connect to clients events and clients' buffers events
-		this.server.addServerListener(new ServerAdapter() {
-			@Override
-			public void onServerNewClient(ServerNewClientEvent event) {
-				API.this.handleNewClient(event.getClient());
-			}
-		});
+	public static Socket createSocketFromRoomCode(int roomCode) throws IOException {
+		String ip;
+		try {
+			ip = Inet4Address.getLocalHost().getHostAddress();
+		} catch (UnknownHostException e) {
+			ip = "127.0.0.1"; // Enter loopback mode
+		}
+
+		StringBuilder serverIp = new StringBuilder();
+		String[] ipChunks = ip.split("\\.");
+		for (int i = 0; i<3; i++) {
+			serverIp.append(ipChunks[i]).append(".");
+		}
+		serverIp.append(roomCode);
+		return new Socket(serverIp.toString(), PORT);
 	}
 
 	public void start() {
-		this.server.start();
+		this.client.start();
+		this.handleNewClient();
+		this.setIp();
+	}
+
+	public void setIp() {
+		try {
+			this.ip = Inet4Address.getLocalHost().getHostAddress();
+		} catch (UnknownHostException e) {
+			this.ip = "127.0.0.1"; // Enter loopback mode
+		}
+	}
+
+	public String getIp() {
+		return this.ip;
+	}
+
+	public void setRoomCode(int roomCode) {
+		this.roomCode = roomCode;
+	}
+
+	public int getRoomCode() {
+		return this.roomCode;
 	}
 
 	public void send(File file) {
@@ -52,17 +94,30 @@ public class API {
 		frt.addFileReadListener(new FileReadAdapter() {
 			@Override
 			public void onFileRead(FileReadEvent event) {
-				API.this.server.propagate(event.getPackets());
-				// File sent
-				System.out.println("File sent");
+				API.this.client.send(event.getPackets());
 			}
 		});
+		frt.start();
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+		
+		UserPacket userPacket = new UserPacket(this.client.nextId());
+		userPacket.setUser(user);
+		this.client.send(userPacket);
+	}
+
+	public User getUser() {
+		return this.user;
 	}
 
 	private void handleFileComplete(FileCompleteEvent event) {
-		File directory = new File(this.filePath);
-		if (!directory.isDirectory()) {
-			directory = new File(System.getProperty("user.dir"));
+		File directory = new File(System.getProperty("user.dir"));
+		if (this.filePath != null) {
+			File test = new File(this.filePath);
+			if (test.isDirectory())
+				directory = test;
 		}
 		String fileName = event.getHeader().getFileName() + "." + event.getHeader().getFileExtension();
 		File file = new File(directory.toString(), fileName);
@@ -89,11 +144,18 @@ public class API {
 		}
 	}
 
+	public void triggerUpdateUser(UpdateUserEvent event) {
+		for (ApiAdapter apiAdapter : this.apiAdapters) {
+			apiAdapter.onUpdateUser(event);
+		}
+	}
+
 	private void handleNewFile(NewFileEvent event) {
 		this.triggerOnNewFile(event);
 	}
 
-	private void handleNewClient(Client client) {
+	private void handleNewClient() {
+		Client client = this.client;
 		client.getBufferManager().addBufferManagerListener(new BufferManagerAdapter() {
 			@Override
 			public void onFileComplete(FileCompleteEvent event) {
@@ -103,6 +165,12 @@ public class API {
 			@Override
 			public void onNewFile(NewFileEvent event) {
 				API.this.handleNewFile(event);
+			}
+		});
+		client.addClientListener(new ClientAdapter() {
+			@Override
+			public void onUpdateUser(UpdateUserEvent event) {
+				API.this.triggerUpdateUser(event);
 			}
 		});
 	}

@@ -10,6 +10,7 @@ import basic.IdGenerator;
 import net.buffer.BufferManager;
 import net.client.events.ClientAdapter;
 import net.client.events.PacketArrivedEvent;
+import net.client.events.UpdateUserEvent;
 import net.client.threads.ReadThread;
 import net.client.threads.SendThread;
 import packet.Packet;
@@ -133,8 +134,9 @@ public class Client extends Thread implements IdGenerator {
 		this.send(confirmationPacket);
 	}
 
-	private void handleUserPacket(UserPacket packet) {
+	private synchronized void handleUserPacket(UserPacket packet) {
 		this.setUser(packet.getUser());
+		this.triggerUserUpdate();
 	}
 
 	public BufferManager getBufferManager() {
@@ -147,6 +149,8 @@ public class Client extends Thread implements IdGenerator {
 
 	public void close() {
 		try {
+			this.sendThread.interrupt();
+			this.readThread.interrupt();
 			this.socket.close();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -167,19 +171,26 @@ public class Client extends Thread implements IdGenerator {
 
 	public synchronized void triggerPacketArrived(Packet packet) {
 		PacketArrivedEvent event = new PacketArrivedEvent(packet);
-		List<ClientAdapter> adapters = this.getClientAdapters();
-		for (int i = 0; i < adapters.size(); i++) {
-			adapters.get(i).onPacketArrived(event);
+		List<ClientAdapter> clientAdapters = this.getClientAdapters();
+		for (int i = 0; i < clientAdapters.size(); i++) {
+			clientAdapters.get(i).onPacketArrived(event);
 		}
-		
 	}
 
-	public ClientAdapter addClientListener(ClientAdapter adapter) {
+	private synchronized void triggerUserUpdate() {
+		UpdateUserEvent event = new UpdateUserEvent(this);
+		for (ClientAdapter adapter : this.getClientAdapters()) {
+			adapter.onUpdateUser(event);
+		}
+	}
+
+
+	public synchronized ClientAdapter addClientListener(ClientAdapter adapter) {
 		this.getClientAdapters().add(adapter);
 		return adapter;
 	}
 
-	public void removeClientListener(ClientAdapter adapter) {
+	public synchronized void removeClientListener(ClientAdapter adapter) {
 		this.getClientAdapters().remove(adapter);
 	}
 
@@ -211,7 +222,7 @@ public class Client extends Thread implements IdGenerator {
 			return false;
 		return true;
 	}
-
+	
 	private int id = 0; // Starts always at zero
 	@Override
 	public synchronized int nextId() {

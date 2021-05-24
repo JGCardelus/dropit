@@ -2,6 +2,7 @@ package net.client.threads;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.net.SocketException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -86,7 +87,6 @@ public class SendThread extends Thread {
 		return packets;
 	}
 
-
 	public void clearPackets() {
 		for (Packet packet : this.client.clearPackets()) {
 			if (packet.getPriority() == Packet.MAX_PRIORITY) {
@@ -106,7 +106,7 @@ public class SendThread extends Thread {
 	public void run() {
 		try {
 			ObjectOutputStream oos = new ObjectOutputStream(this.client.getSocket().getOutputStream());
-			while (true) {
+			while (!this.isInterrupted()) {
 				// Clear parent's queue
 				this.clearPackets();
 				// Get and clear all packets of max priority
@@ -140,6 +140,9 @@ public class SendThread extends Thread {
 			}
 			oos.writeObject(packet);
 			oos.flush();
+		} 
+		catch (SocketException se) {
+			this.client.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

@@ -44,6 +44,9 @@ public class Buffer {
 	}
 	public void setPacketIds(List<Integer> packetIds) {
 		this.packetIds = packetIds;
+		for (int i = 0; i < this.packetIds.size(); i++) {
+			this.packets.add(null);
+		}
 	}
 
 	public boolean isComplete() {
@@ -94,7 +97,7 @@ public class Buffer {
 		return packetsCount;
 	}
 	
-	private void handlePacket(Packet packet) {
+	private synchronized void handlePacket(Packet packet) {
 		if (this.packetIds.contains(packet.getId())) {
 			int index = this.packetIds.indexOf(packet.getId());
 			this.packets.add(index, packet);
@@ -112,16 +115,20 @@ public class Buffer {
 		});
 	}
 
-	private void triggerOnBufferNewPacket(Packet packet) {
+	private synchronized List<BufferAdapter> getBufferAdapters() {
+		return this.bufferAdapters;
+	}
+
+	private synchronized void triggerOnBufferNewPacket(Packet packet) {
 		BufferNewPacketEvent event = new BufferNewPacketEvent(this, packet);
-		for (BufferAdapter adapter : this.bufferAdapters) {
+		for (BufferAdapter adapter : this.getBufferAdapters()) {
 			adapter.onBufferNewPacket(event);
 		}
 	}
 
-	private void triggerOnBufferComplete() {
+	private synchronized void triggerOnBufferComplete() {
 		BufferCompleteEvent event = new BufferCompleteEvent(this.getHeader(), this.getPackets());
-		for (BufferAdapter adapter : this.bufferAdapters) {
+		for (BufferAdapter adapter : this.getBufferAdapters()) {
 			adapter.onBufferComplete(event);
 		}
 
@@ -134,19 +141,21 @@ public class Buffer {
 		}
 	}
 
-	private void triggerOnFileComplete() {
+	private synchronized void triggerOnFileComplete() {
 		if (this.getHeader() instanceof FileHeaderPacket) {
 			FileCompleteEvent event = new FileCompleteEvent((FileHeaderPacket) this.getHeader(), this.getPackets());
-			for (BufferAdapter adapter : this.bufferAdapters)
+			for (BufferAdapter adapter : this.getBufferAdapters())
 				adapter.onFileComplete(event);
 		}
 	}
 
-	public void addBufferListener(BufferAdapter adapter) {
+	public synchronized void addBufferListener(BufferAdapter adapter) {
 		this.bufferAdapters.add(adapter);
 	}
 
 	public int getPercentage() {
-		return this.getPacketsCount() / this.packetIds.size() * 100;
+		float a = (float) this.getPacketsCount();
+		float b = (float) this.packetIds.size();
+		return (int) (a/b*100f);
 	}
 }

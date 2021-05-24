@@ -13,8 +13,8 @@ import packet.types.FilePacket;
 public class IOManager implements IdGenerator{
 	private Client client;
 	
-	public IOManager(Client server) {
-		this.setServer(server);
+	public IOManager(Client client) {
+		this.setClient(client);
 	}
 
 	public FileReadThread readFile(File file) {
@@ -30,11 +30,11 @@ public class IOManager implements IdGenerator{
 		return new FileWriteThread(file, bufferHeaderPacket, packets);
 	}
 
-	public Client getServer() {
+	public Client getClient() {
 		return client;
 	}
 
-	public void setServer(Client client) {
+	public void setClient(Client client) {
 		this.client = client;
 	}
 

@@ -85,19 +85,17 @@ public class API {
 			@Override
 			public void onFileRead(FileReadEvent event) {
 				API.this.server.propagate(event.getPackets());
-				// File sent
-				System.out.println("File sent");
 			}
 		});
+		frt.start();
 	}
 
 	public void setUser(User user) {
 		this.user = user;
-		if (this.server.isAlive()) {
-			UserPacket userPacket = new UserPacket(this.server.nextId());
-			userPacket.setUser(user);
-			this.server.propagate(userPacket);
-		}
+
+		UserPacket userPacket = new UserPacket(this.server.nextId());
+		userPacket.setUser(user);
+		this.server.propagate(userPacket);
 	}
 
 	public User getUser() {

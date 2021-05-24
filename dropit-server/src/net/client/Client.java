@@ -138,13 +138,13 @@ public class Client extends Thread {
 		}
 	}
 
-	private void sendPacketConfirmation(Packet packet) {
+	private synchronized void sendPacketConfirmation(Packet packet) {
 		ConfirmationPacket confirmationPacket = new ConfirmationPacket(this.server.nextId());
 		confirmationPacket.setPacketToConfirmId(packet.getId());
 		this.send(confirmationPacket);
 	}
 
-	private void handleUserPacket(UserPacket packet) {
+	private synchronized void handleUserPacket(UserPacket packet) {
 		this.setUser(packet.getUser());
 		this.triggerUserUpdate();
 	}
@@ -158,6 +158,8 @@ public class Client extends Thread {
 	}
 
 	public void close() {
+		this.sendThread.interrupt();
+		this.readThread.interrupt();
 		this.server.close(this);
 	}
 
@@ -175,26 +177,26 @@ public class Client extends Thread {
 
 	public synchronized void triggerPacketArrived(Packet packet) {
 		PacketArrivedEvent event = new PacketArrivedEvent(packet);
-		for (ClientAdapter adapter : this.clientAdapters) {
+		for (ClientAdapter adapter : this.getClientAdapters()) {
 			adapter.onPacketArrived(event);
 		}
 		
 	}
 
-	private void triggerUserUpdate() {
+	private synchronized void triggerUserUpdate() {
 		UpdateUserEvent event = new UpdateUserEvent(this);
-		for (ClientAdapter adapter : this.clientAdapters) {
+		for (ClientAdapter adapter : this.getClientAdapters()) {
 			adapter.onUpdateUser(event);
 		}
 	}
 
 
-	public ClientAdapter addClientListener(ClientAdapter adapter) {
+	public synchronized ClientAdapter addClientListener(ClientAdapter adapter) {
 		this.getClientAdapters().add(adapter);
 		return adapter;
 	}
 
-	public void removeClientListener(ClientAdapter adapter) {
+	public synchronized void removeClientListener(ClientAdapter adapter) {
 		this.getClientAdapters().remove(adapter);
 	}
 

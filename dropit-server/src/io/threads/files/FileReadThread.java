@@ -29,6 +29,7 @@ public class FileReadThread extends Thread {
 	public FileReadThread(File file, Server server, IOManager ioManager) {
 		this.setFile(file);
 		this.setIoManager(ioManager);
+		this.setServer(server);
 	}
 
 	@Override

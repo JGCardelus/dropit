@@ -44,6 +44,9 @@ public class Buffer {
 	}
 	public void setPacketIds(List<Integer> packetIds) {
 		this.packetIds = packetIds;
+		for (int i = 0; i < this.packetIds.size(); i++) {
+			this.packets.add(null);
+		}
 	}
 
 	public boolean isComplete() {
@@ -112,16 +115,20 @@ public class Buffer {
 		});
 	}
 
-	private void triggerOnBufferNewPacket(Packet packet) {
+	private synchronized List<BufferAdapter> getBufferAdapters() {
+		return this.bufferAdapters;
+	}
+
+	private synchronized void triggerOnBufferNewPacket(Packet packet) {
 		BufferNewPacketEvent event = new BufferNewPacketEvent(this, packet);
-		for (BufferAdapter adapter : this.bufferAdapters) {
+		for (BufferAdapter adapter : this.getBufferAdapters()) {
 			adapter.onBufferNewPacket(event);
 		}
 	}
 
-	private void triggerOnBufferComplete() {
+	private synchronized void triggerOnBufferComplete() {
 		BufferCompleteEvent event = new BufferCompleteEvent(this.getHeader(), this.getPackets());
-		for (BufferAdapter adapter : this.bufferAdapters) {
+		for (BufferAdapter adapter : this.getBufferAdapters()) {
 			adapter.onBufferComplete(event);
 		}
 
@@ -134,15 +141,15 @@ public class Buffer {
 		}
 	}
 
-	private void triggerOnFileComplete() {
+	private synchronized void triggerOnFileComplete() {
 		if (this.getHeader() instanceof FileHeaderPacket) {
 			FileCompleteEvent event = new FileCompleteEvent((FileHeaderPacket) this.getHeader(), this.getPackets());
-			for (BufferAdapter adapter : this.bufferAdapters)
+			for (BufferAdapter adapter : this.getBufferAdapters())
 				adapter.onFileComplete(event);
 		}
 	}
 
-	public void addBufferListener(BufferAdapter adapter) {
+	public synchronized void addBufferListener(BufferAdapter adapter) {
 		this.bufferAdapters.add(adapter);
 	}
 

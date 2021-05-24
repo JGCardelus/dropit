@@ -29,7 +29,7 @@ public class FileReadThread extends Thread {
 	public FileReadThread(File file, Client client, IOManager ioManager) {
 		this.setFile(file);
 		this.setIoManager(ioManager);
-		this.getClient(client);
+		this.setClient(client);
 	}
 
 	@Override
@@ -80,8 +80,8 @@ public class FileReadThread extends Thread {
 
 	public FileHeaderPacket getFileHeader() {
 		FileHeaderPacket fileHeaderPacket = new FileHeaderPacket(this.client.nextId());
-			
-		String[] nameChunks = this.file.getName().split("\\.");
+
+		String[] nameChunks = this.file.getName().split("\\.");	
 		String extension = nameChunks[nameChunks.length - 1];
 		StringBuilder name = new StringBuilder();
 		for (int i = 0; i < nameChunks.length - 1; i++)
@@ -122,7 +122,7 @@ public class FileReadThread extends Thread {
 		return client;
 	}
 
-	public void getClient(Client client) {
+	public void setClient(Client client) {
 		this.client = client;
 	}
 
