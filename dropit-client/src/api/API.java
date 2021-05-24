@@ -67,6 +67,10 @@ public class API {
 		this.client.start();
 		this.handleNewClient();
 		this.setIp();
+
+		if (this.user != null) {
+			this.setUser(this.user);
+		}
 	}
 
 	public void setIp() {

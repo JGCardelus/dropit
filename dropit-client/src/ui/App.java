@@ -17,8 +17,8 @@ import javax.swing.border.Border;
 
 import api.API;
 import ui.downloads.DownloadsWindow;
-import ui.drop.DropWindow;
 import ui.generic.Menu;
+import ui.landing.LandingDialog;
 import ui.settings.SettingsWindow;
 
 public class App extends JFrame {
@@ -58,15 +58,11 @@ public class App extends JFrame {
 
 	public App() {
 		// Start server and IOManager
-		Socket socket;
-		try {
-			socket = API.createSocketFromRoomCode(51);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			return;
-		}
+		LandingDialog landingDialog = new LandingDialog(this);
+		landingDialog.setVisible(true);
+	}
 
-		this.api = new API(socket);
+	public void start() {
 		this.api.start();
 
 		this.menu = new Menu(this.api, this);
@@ -93,6 +89,10 @@ public class App extends JFrame {
 		this.pack();
 		this.setLocationRelativeTo(null);
 		this.setVisible(true);
+	}
+
+	public void setApi(API api) {
+		this.api = api;
 	}
 
 	public API getApi() {
